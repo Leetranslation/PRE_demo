@@ -15,7 +15,9 @@
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" size="large" class="login-btn" native-type="submit">登 录</el-button>
+          <el-button type="primary" size="large" class="login-btn" native-type="submit" :loading="loading">
+            登 录
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -23,15 +25,31 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
-const form = reactive({ username: '', password: '' })
+const userStore = useUserStore()
+const loading = ref(false)
+const form = reactive({ username: 'admin', password: 'admin123' })
 
-function handleLogin() {
-  // TODO: 接入后端登录接口
-  router.push('/dashboard')
+async function handleLogin() {
+  if (!form.username || !form.password) {
+    ElMessage.warning('请输入用户名和密码')
+    return
+  }
+  loading.value = true
+  try {
+    await userStore.login(form)
+    ElMessage.success('登录成功')
+    router.push('/dashboard')
+  } catch {
+    // 错误已在拦截器统一提示
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

@@ -27,9 +27,20 @@ const router = createRouter({
   routes
 })
 
+// 登录守卫
 router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem('token')
+  if (to.path !== '/login' && !token) {
+    next('/login')
+  } else if (to.path === '/login' && token) {
+    next('/dashboard')
+  } else {
+    next()
+  }
+})
+
+router.afterEach((to) => {
   document.title = `${to.meta.title ?? ''} - Token 制造`
-  next()
 })
 
 export default router

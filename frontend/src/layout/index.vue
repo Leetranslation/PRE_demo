@@ -56,9 +56,9 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <span class="username">管理员</span>
+          <span class="username">{{ userStore.realName || userStore.username }}</span>
           <el-dropdown>
-            <el-avatar :size="32" style="background: #d32f2f">A</el-avatar>
+            <el-avatar :size="32" style="background: #d32f2f">{{ avatarText }}</el-avatar>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
@@ -77,13 +77,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title as string)
+const avatarText = computed(() => (userStore.realName || userStore.username || 'A').charAt(0))
 
 function handleLogout() {
+  userStore.logout()
   router.push('/login')
 }
 </script>
