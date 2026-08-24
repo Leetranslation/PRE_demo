@@ -195,7 +195,9 @@ CREATE TABLE `dictionary` (
   `status`      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
   `remark`      VARCHAR(255) DEFAULT NULL COMMENT '备注',
   `deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `create_by`   VARCHAR(64)  DEFAULT NULL COMMENT '创建人',
   `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`   VARCHAR(64)  DEFAULT NULL COMMENT '修改人',
   `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
   KEY `idx_type` (`dict_type`)
@@ -310,7 +312,9 @@ CREATE TABLE `warehouse` (
   `status`      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
   `remark`      VARCHAR(255) DEFAULT NULL COMMENT '备注',
   `deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `create_by`   VARCHAR(64)  DEFAULT NULL COMMENT '创建人',
   `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`   VARCHAR(64)  DEFAULT NULL COMMENT '修改人',
   `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_code` (`code`)
@@ -324,7 +328,10 @@ CREATE TABLE `location` (
   `name`         VARCHAR(64) DEFAULT NULL COMMENT '库位名称',
   `status`       TINYINT     NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
   `deleted`      TINYINT     NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `create_by`    VARCHAR(64) DEFAULT NULL COMMENT '创建人',
   `create_time`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`    VARCHAR(64) DEFAULT NULL COMMENT '修改人',
+  `update_time`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
   KEY `idx_warehouse` (`warehouse_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库位';

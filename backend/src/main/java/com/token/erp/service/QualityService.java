@@ -1,0 +1,111 @@
+package com.token.erp.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.token.erp.common.BizException;
+import com.token.erp.entity.Inventory;
+import com.token.erp.entity.QualityInspection;
+import com.token.erp.entity.QualityResult;
+import com.token.erp.mapper.QualityInspectionMapper;
+import com.token.erp.mapper.QualityResultMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class QualityService {
+
+    private final QualityInspectionMapper inspectionMapper;
+    private final QualityResultMapper resultMapper;
+    private final InventoryService inventoryService;
+    private final CodeGenerator codeGenerator;
+
+    public Page<QualityInspection> page(long page, long pageSize, String result) {
+        LambdaQueryWrapper<QualityInspection> qw = new LambdaQueryWrapper<>();
+        if (result != null && !result.isEmpty()) {
+            qw.eq(QualityInspection::getResult, result);
+        }
+        qw.orderByDesc(QualityInspection::getId);
+        return inspectionMapper.selectPage(new Page<>(page, pageSize), qw);
+    }
+
+    /** 创建质检单（针对待检库存的物料） */
+    @Transactional
+    public QualityInspection create(QualityInspection inspection) {
+        inspection.setId(null);
+        inspection.setInspectionNo(codeGenerator.next("QC"));
+        inspection.setInspectionDate(inspection.getInspectionDate() != null
+                ? inspection.getInspectionDate() : LocalDate.now());
+        inspection.setResult(null);
+        inspectionMapper.insert(inspection);
+        return inspection;
+    }
+
+    /**
+     * 质检判定
+     * @param inspectionId 质检单ID
+     * @param result 合格 qualified / 不合格 unqualified
+     * @param handleType 不合格处理方式：return退货 / scrap报废（仅不合格时必填）
+     * @param reason 不合格原因
+     */
+    @Transactional
+    public void judge(Long inspectionId, String result, String handleType, String reason) {
+        QualityInspection inspection = inspectionMapper.selectById(inspectionId);
+        if (inspection == null) throw new BizException(404, "质检单不存在");
+        if (inspection.getResult() != null) throw new BizException("该质检单已判定");
+
+        inspection.setResult(result);
+        inspectionMapper.updateById(inspection);
+
+        // 待检库存维度
+        Inventory pendingDim = new Inventory();
+        pendingDim.setItemId(inspection.getItemId());
+        pendingDim.setItemType(inspection.getItemType());
+        pendingDim.setWarehouseId(inspection.getWarehouseId() != null ? inspection.getWarehouseId() : null);
+        pendingDim.setStockType("pending_qc");
+
+        if ("qualified".equals(result)) {
+            // 合格：待检 → 可用（先出待检，再入可用）
+            inventoryService.change(pendingDim, "out", inspection.getQuantity(),
+                    "quality_qualified", inspection.getId(), inspection.getInspectionNo());
+            Inventory availableDim = new Inventory();
+            availableDim.setItemId(inspection.getItemId());
+            availableDim.setItemType(inspection.getItemType());
+            availableDim.setWarehouseId(inspection.getWarehouseId());
+            availableDim.setStockType("available");
+            inventoryService.change(availableDim, "in", inspection.getQuantity(),
+                    "quality_qualified", inspection.getId(), inspection.getInspectionNo());
+        } else if ("unqualified".equals(result)) {
+            if (handleType == null || handleType.isEmpty()) {
+                throw new BizException("不合格需指定处理方式（退货/报废）");
+            }
+            // 不合格：待检 → 不合格库存（退货/报废后续处理）
+            inventoryService.change(pendingDim, "out", inspection.getQuantity(),
+                    "quality_unqualified", inspection.getId(), inspection.getInspectionNo());
+            Inventory unqualifiedDim = new Inventory();
+            unqualifiedDim.setItemId(inspection.getItemId());
+            unqualifiedDim.setItemType(inspection.getItemType());
+            unqualifiedDim.setWarehouseId(inspection.getWarehouseId());
+            unqualifiedDim.setStockType("unqualified");
+            inventoryService.change(unqualifiedDim, "in", inspection.getQuantity(),
+                    "quality_unqualified", inspection.getId(), inspection.getInspectionNo());
+
+            // 记录处理结果
+            QualityResult qr = new QualityResult();
+            qr.setInspectionId(inspection.getId());
+            qr.setHandleType(handleType);
+            qr.setQuantity(inspection.getQuantity());
+            qr.setReason(reason);
+            qr.setResultStatus("unqualified");
+            qr.setCreateTime(LocalDateTime.now());
+            resultMapper.insert(qr);
+        } else {
+            throw new BizException("非法质检结果");
+        }
+    }
+}

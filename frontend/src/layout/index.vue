@@ -33,10 +33,13 @@
           <el-icon><ShoppingCart /></el-icon>
           <span>销售管理</span>
         </el-menu-item>
-        <el-menu-item index="/purchase">
-          <el-icon><Box /></el-icon>
-          <span>采购管理</span>
-        </el-menu-item>
+        <el-sub-menu index="/purchase">
+          <template #title>
+            <el-icon><Box /></el-icon>
+            <span>采购管理</span>
+          </template>
+          <el-menu-item index="/purchase/order">采购订单</el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/production">
           <el-icon><Setting /></el-icon>
           <span>生产管理</span>
@@ -53,7 +56,7 @@
           <el-menu-item index="/inventory/stock">库存查询</el-menu-item>
           <el-menu-item index="/inventory/flow">库存流水</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/quality">
+        <el-menu-item index="/quality/index">
           <el-icon><CircleCheck /></el-icon>
           <span>质量管理</span>
         </el-menu-item>

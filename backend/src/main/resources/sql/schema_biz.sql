@@ -151,8 +151,11 @@ CREATE TABLE `purchase_inbound` (
   `inbound_date` DATE         NOT NULL COMMENT '入库日期',
   `status`       VARCHAR(16)  NOT NULL DEFAULT 'completed' COMMENT '状态',
   `remark`       VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `deleted`      TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   `create_by`    VARCHAR(64)  DEFAULT NULL COMMENT '创建人',
   `create_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`    VARCHAR(64)  DEFAULT NULL COMMENT '修改人',
+  `update_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_inbound_no` (`inbound_no`),
   KEY `idx_order` (`order_id`)

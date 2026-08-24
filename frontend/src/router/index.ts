@@ -73,6 +73,20 @@ const routes: RouteRecordRaw[] = [
         name: 'InventoryFlow',
         component: () => import('@/views/inventory/flow.vue'),
         meta: { title: '库存流水' }
+      },
+      // ===== 采购 =====
+      {
+        path: 'purchase/order',
+        name: 'PurchaseOrder',
+        component: () => import('@/views/purchase/order.vue'),
+        meta: { title: '采购订单' }
+      },
+      // ===== 质量 =====
+      {
+        path: 'quality/index',
+        name: 'Quality',
+        component: () => import('@/views/quality/index.vue'),
+        meta: { title: '质量检验' }
       }
     ]
   }
