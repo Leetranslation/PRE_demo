@@ -1,0 +1,134 @@
+<template>
+  <el-container class="layout">
+    <el-aside width="220px" class="aside">
+      <div class="logo">
+        <span class="logo-text">Token 制造</span>
+      </div>
+      <el-menu
+        :default-active="activeMenu"
+        class="menu"
+        background-color="#1f2430"
+        text-color="#bfcbd9"
+        active-text-color="#ffffff"
+        router
+      >
+        <el-menu-item index="/dashboard">
+          <el-icon><HomeFilled /></el-icon>
+          <span>首页</span>
+        </el-menu-item>
+        <el-menu-item index="/sales">
+          <el-icon><ShoppingCart /></el-icon>
+          <span>销售管理</span>
+        </el-menu-item>
+        <el-menu-item index="/purchase">
+          <el-icon><Box /></el-icon>
+          <span>采购管理</span>
+        </el-menu-item>
+        <el-menu-item index="/production">
+          <el-icon><Setting /></el-icon>
+          <span>生产管理</span>
+        </el-menu-item>
+        <el-menu-item index="/mrp">
+          <el-icon><DataAnalysis /></el-icon>
+          <span>MRP 计划</span>
+        </el-menu-item>
+        <el-menu-item index="/inventory">
+          <el-icon><Coin /></el-icon>
+          <span>库存管理</span>
+        </el-menu-item>
+        <el-menu-item index="/quality">
+          <el-icon><CircleCheck /></el-icon>
+          <span>质量管理</span>
+        </el-menu-item>
+        <el-menu-item index="/system">
+          <el-icon><User /></el-icon>
+          <span>系统管理</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <el-container>
+      <el-header class="header">
+        <div class="header-left">
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="currentTitle">{{ currentTitle }}</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+        <div class="header-right">
+          <span class="username">管理员</span>
+          <el-dropdown>
+            <el-avatar :size="32" style="background: #d32f2f">A</el-avatar>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </el-header>
+      <el-main class="main">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const activeMenu = computed(() => route.path)
+const currentTitle = computed(() => route.meta.title as string)
+
+function handleLogout() {
+  router.push('/login')
+}
+</script>
+
+<style scoped>
+.layout {
+  height: 100%;
+}
+.aside {
+  background-color: #1f2430;
+  display: flex;
+  flex-direction: column;
+}
+.logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.menu {
+  border-right: none;
+  flex: 1;
+}
+.header {
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.username {
+  font-size: 14px;
+  color: #333;
+}
+.main {
+  padding: 16px;
+  overflow: auto;
+}
+</style>

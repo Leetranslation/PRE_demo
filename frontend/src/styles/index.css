@@ -1,0 +1,29 @@
+:root {
+  --token-red: #d32f2f;
+  --token-red-light: #e53935;
+  --token-bg: #f5f6f8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  background-color: var(--token-bg);
+}
+
+:root {
+  --el-color-primary: #d32f2f;
+  --el-color-primary-light-3: #e05b5b;
+  --el-color-primary-light-5: #e98a8a;
+  --el-color-primary-light-7: #f2b9b9;
+  --el-color-primary-light-8: #f6cccc;
+  --el-color-primary-light-9: #fbe5e5;
+  --el-color-primary-dark-2: #b12727;
+}
