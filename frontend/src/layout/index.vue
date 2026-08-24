@@ -16,6 +16,18 @@
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
+        <el-sub-menu index="/base">
+          <template #title>
+            <el-icon><Files /></el-icon>
+            <span>基础资料</span>
+          </template>
+          <el-menu-item index="/base/customer">客户档案</el-menu-item>
+          <el-menu-item index="/base/supplier">供应商档案</el-menu-item>
+          <el-menu-item index="/base/material">物料档案</el-menu-item>
+          <el-menu-item index="/base/product">产品档案</el-menu-item>
+          <el-menu-item index="/base/warehouse">仓库</el-menu-item>
+          <el-menu-item index="/base/bom">BOM 管理</el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/sales">
           <el-icon><ShoppingCart /></el-icon>
           <span>销售管理</span>

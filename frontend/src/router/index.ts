@@ -17,6 +17,43 @@ const routes: RouteRecordRaw[] = [
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '首页', icon: 'HomeFilled' }
+      },
+      // ===== 基础资料 =====
+      {
+        path: 'base/customer',
+        name: 'Customer',
+        component: () => import('@/views/base/customer.vue'),
+        meta: { title: '客户档案' }
+      },
+      {
+        path: 'base/supplier',
+        name: 'Supplier',
+        component: () => import('@/views/base/supplier.vue'),
+        meta: { title: '供应商档案' }
+      },
+      {
+        path: 'base/material',
+        name: 'Material',
+        component: () => import('@/views/base/material.vue'),
+        meta: { title: '物料档案' }
+      },
+      {
+        path: 'base/product',
+        name: 'Product',
+        component: () => import('@/views/base/product.vue'),
+        meta: { title: '产品档案' }
+      },
+      {
+        path: 'base/warehouse',
+        name: 'Warehouse',
+        component: () => import('@/views/base/warehouse.vue'),
+        meta: { title: '仓库' }
+      },
+      {
+        path: 'base/bom',
+        name: 'Bom',
+        component: () => import('@/views/base/bom.vue'),
+        meta: { title: 'BOM 管理' }
       }
     ]
   }

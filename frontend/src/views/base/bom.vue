@@ -1,0 +1,192 @@
+<template>
+  <el-card shadow="never">
+    <el-form :inline="true" :model="query" class="filter-bar">
+      <el-form-item label="关键字">
+        <el-input v-model="query.keyword" placeholder="名称/编号" clearable style="width: 200px" @keyup.enter="handleSearch" />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <div class="toolbar">
+      <el-button type="primary" @click="openDialog()">新增 BOM</el-button>
+    </div>
+
+    <el-table :data="records" v-loading="loading" border stripe>
+      <el-table-column prop="code" label="BOM编号" width="160" />
+      <el-table-column prop="name" label="名称" min-width="160" />
+      <el-table-column label="状态" width="90">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '生效' : '失效' }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      class="pagination"
+      v-model:current-page="query.page"
+      v-model:page-size="query.pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      @size-change="load"
+      @current-change="load"
+    />
+  </el-card>
+
+  <!-- 新增 BOM -->
+  <el-dialog v-model="dialogVisible" title="新增 BOM" width="760px">
+    <el-form :model="form" label-width="100px">
+      <el-row :gutter="12">
+        <el-col :span="12"><el-form-item label="名称"><el-input v-model="form.name" /></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="版本"><el-input v-model="form.version" placeholder="如 V1.0" /></el-form-item></el-col>
+        <el-col :span="12">
+          <el-form-item label="产品ID" required>
+            <el-input-number v-model="form.productId" :min="1" style="width: 100%" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+    </el-form>
+
+    <div class="item-toolbar">
+      <span>BOM 明细</span>
+      <el-button size="small" type="primary" @click="addItem">添加明细</el-button>
+    </div>
+    <el-table :data="form.items" border size="small">
+      <el-table-column label="子项类型" width="110">
+        <template #default="{ row }">
+          <el-select v-model="row.childType" size="small">
+            <el-option label="物料" value="material" />
+            <el-option label="产品" value="product" />
+          </el-select>
+        </template>
+      </el-table-column>
+      <el-table-column label="子项ID" width="120">
+        <template #default="{ row }">
+          <el-input-number v-model="row.childId" :min="1" size="small" style="width: 100%" />
+        </template>
+      </el-table-column>
+      <el-table-column label="数量" width="130">
+        <template #default="{ row }">
+          <el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width: 100%" />
+        </template>
+      </el-table-column>
+      <el-table-column label="单位" width="90">
+        <template #default="{ row }">
+          <el-input v-model="row.unit" size="small" />
+        </template>
+      </el-table-column>
+      <el-table-column label="损耗率" width="130">
+        <template #default="{ row }">
+          <el-input-number v-model="row.lossRate" :min="0" :precision="6" size="small" style="width: 100%" />
+        </template>
+      </el-table-column>
+      <el-table-column label="工序" width="120">
+        <template #default="{ row }">
+          <el-input v-model="row.process" size="small" />
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="70">
+        <template #default="{ $index }">
+          <el-button link type="danger" @click="form.items.splice($index, 1)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <template #footer>
+      <el-button @click="dialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleSave">保存</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 明细查看 -->
+  <el-dialog v-model="itemsVisible" title="BOM 明细" width="760px">
+    <el-table :data="items" border size="small">
+      <el-table-column prop="childType" label="类型" width="100" />
+      <el-table-column prop="childId" label="子项ID" width="100" />
+      <el-table-column prop="quantity" label="数量" width="120" />
+      <el-table-column prop="unit" label="单位" width="90" />
+      <el-table-column prop="lossRate" label="损耗率" width="100" />
+      <el-table-column prop="process" label="工序" min-width="120" />
+    </el-table>
+  </el-dialog>
+</template>
+
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { bomList, bomCreate, bomItems } from '@/api/base'
+
+const loading = ref(false)
+const records = ref<any[]>([])
+const total = ref(0)
+const dialogVisible = ref(false)
+const itemsVisible = ref(false)
+const items = ref<any[]>([])
+const query = reactive({ page: 1, pageSize: 10, keyword: '' })
+const form = reactive<any>({ items: [] })
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await bomList(query)
+    records.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() { query.page = 1; load() }
+function handleReset() { query.keyword = ''; query.page = 1; load() }
+
+function openDialog() {
+  form.id = undefined
+  form.name = ''
+  form.version = ''
+  form.productId = undefined
+  form.items = []
+  dialogVisible.value = true
+}
+
+function addItem() {
+  form.items.push({ childType: 'material', childId: undefined, quantity: 0, unit: '', lossRate: 0, process: '' })
+}
+
+async function handleSave() {
+  if (!form.productId || !form.items.length) {
+    ElMessage.warning('请填写产品并至少添加一条明细')
+    return
+  }
+  await bomCreate(form)
+  ElMessage.success('保存成功')
+  dialogVisible.value = false
+  load()
+}
+
+async function viewItems(row: any) {
+  items.value = await bomItems(row.id)
+  itemsVisible.value = true
+}
+
+load()
+</script>
+
+<style scoped>
+.filter-bar { margin-bottom: 8px; }
+.toolbar { margin-bottom: 12px; }
+.pagination { margin-top: 12px; justify-content: flex-end; }
+.item-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+}
+</style>
