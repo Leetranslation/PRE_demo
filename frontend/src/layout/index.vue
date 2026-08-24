@@ -26,6 +26,7 @@
           <el-menu-item index="/base/material">物料档案</el-menu-item>
           <el-menu-item index="/base/product">产品档案</el-menu-item>
           <el-menu-item index="/base/warehouse">仓库</el-menu-item>
+          <el-menu-item index="/base/location">库位管理</el-menu-item>
           <el-menu-item index="/base/bom">BOM 管理</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/sales">
@@ -44,10 +45,14 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>MRP 计划</span>
         </el-menu-item>
-        <el-menu-item index="/inventory">
-          <el-icon><Coin /></el-icon>
-          <span>库存管理</span>
-        </el-menu-item>
+        <el-sub-menu index="/inventory">
+          <template #title>
+            <el-icon><Coin /></el-icon>
+            <span>库存管理</span>
+          </template>
+          <el-menu-item index="/inventory/stock">库存查询</el-menu-item>
+          <el-menu-item index="/inventory/flow">库存流水</el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/quality">
           <el-icon><CircleCheck /></el-icon>
           <span>质量管理</span>

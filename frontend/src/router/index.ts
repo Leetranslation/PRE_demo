@@ -54,6 +54,25 @@ const routes: RouteRecordRaw[] = [
         name: 'Bom',
         component: () => import('@/views/base/bom.vue'),
         meta: { title: 'BOM 管理' }
+      },
+      {
+        path: 'base/location',
+        name: 'Location',
+        component: () => import('@/views/base/location.vue'),
+        meta: { title: '库位管理' }
+      },
+      // ===== 库存 =====
+      {
+        path: 'inventory/stock',
+        name: 'InventoryStock',
+        component: () => import('@/views/inventory/stock.vue'),
+        meta: { title: '库存查询' }
+      },
+      {
+        path: 'inventory/flow',
+        name: 'InventoryFlow',
+        component: () => import('@/views/inventory/flow.vue'),
+        meta: { title: '库存流水' }
       }
     ]
   }

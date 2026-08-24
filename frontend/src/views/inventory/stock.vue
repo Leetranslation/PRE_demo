@@ -1,0 +1,106 @@
+<template>
+  <el-card shadow="never">
+    <el-form :inline="true" :model="query" class="filter-bar">
+      <el-form-item label="物料/产品ID">
+        <el-input-number v-model="query.itemId" :min="1" placeholder="按ID查询" style="width: 160px" />
+      </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="query.itemType" placeholder="全部" clearable style="width: 120px">
+          <el-option label="物料" value="material" />
+          <el-option label="产品" value="product" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="库存类型">
+        <el-select v-model="query.stockType" placeholder="全部" clearable style="width: 140px">
+          <el-option label="可用" value="available" />
+          <el-option label="待检" value="pending_qc" />
+          <el-option label="不合格" value="unqualified" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <el-table :data="records" v-loading="loading" border stripe>
+      <el-table-column prop="itemType" label="类型" width="80">
+        <template #default="{ row }">{{ row.itemType === 'material' ? '物料' : '产品' }}</template>
+      </el-table-column>
+      <el-table-column prop="itemId" label="物料/产品ID" width="120" />
+      <el-table-column prop="warehouseId" label="仓库ID" width="100" />
+      <el-table-column prop="batchNo" label="批次号" width="130" />
+      <el-table-column prop="serialNo" label="序列号" width="130" />
+      <el-table-column label="库存类型" width="100">
+        <template #default="{ row }">
+          <el-tag :type="stockTagType(row.stockType)">{{ stockText(row.stockType) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="quantity" label="实际数量" width="120" align="right" />
+      <el-table-column prop="reservedQty" label="预留数量" width="120" align="right" />
+      <el-table-column label="可用数量" width="120" align="right">
+        <template #default="{ row }">
+          {{ (Number(row.quantity) - Number(row.reservedQty)).toFixed(6) }}
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      class="pagination"
+      v-model:current-page="query.page"
+      v-model:page-size="query.pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      @size-change="load"
+      @current-change="load"
+    />
+  </el-card>
+</template>
+
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { inventoryList } from '@/api/inventory'
+
+const loading = ref(false)
+const records = ref<any[]>([])
+const total = ref(0)
+const query = reactive({
+  page: 1, pageSize: 10, itemId: undefined as number | undefined,
+  itemType: undefined as string | undefined, stockType: undefined as string | undefined
+})
+
+function stockText(v: string) {
+  return { available: '可用', pending_qc: '待检', unqualified: '不合格' }[v] || v
+}
+function stockTagType(v: string) {
+  return { available: 'success', pending_qc: 'warning', unqualified: 'danger' }[v] || 'info'
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await inventoryList(query)
+    records.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() { query.page = 1; load() }
+function handleReset() {
+  query.itemId = undefined
+  query.itemType = undefined
+  query.stockType = undefined
+  query.page = 1
+  load()
+}
+
+load()
+</script>
+
+<style scoped>
+.filter-bar { margin-bottom: 8px; }
+.pagination { margin-top: 12px; justify-content: flex-end; }
+</style>
