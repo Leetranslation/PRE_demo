@@ -74,6 +74,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/inventory/flow.vue'),
         meta: { title: '库存流水' }
       },
+      // ===== MRP =====
+      {
+        path: 'mrp/index',
+        name: 'Mrp',
+        component: () => import('@/views/mrp/index.vue'),
+        meta: { title: 'MRP 计划' }
+      },
       // ===== 销售 =====
       {
         path: 'sales/order',

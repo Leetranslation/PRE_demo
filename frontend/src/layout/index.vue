@@ -50,7 +50,7 @@
           </template>
           <el-menu-item index="/production/order">生产工单</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/mrp">
+        <el-menu-item index="/mrp/index">
           <el-icon><DataAnalysis /></el-icon>
           <span>MRP 计划</span>
         </el-menu-item>
