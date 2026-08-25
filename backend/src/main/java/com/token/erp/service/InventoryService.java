@@ -8,15 +8,24 @@ import com.token.erp.entity.InventoryTransaction;
 import com.token.erp.mapper.InventoryMapper;
 import com.token.erp.mapper.InventoryTransactionMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
  * 库存核心服务
  * 所有库存数量变化必须经过此服务，保证台账+流水事务一致
+ *
+ * 并发安全策略（对应文档 20.2）：
+ * 1. 已存在库存行：SELECT ... FOR UPDATE 行级悲观锁，串行化同维度并发操作
+ * 2. 库存行不存在：Redis 分布式锁按维度串行化，配合唯一索引兜底，避免并发双插入
  */
 @Service
 @RequiredArgsConstructor
@@ -24,6 +33,7 @@ public class InventoryService {
 
     private final InventoryMapper inventoryMapper;
     private final InventoryTransactionMapper transactionMapper;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 库存变动（统一入口）
@@ -40,9 +50,64 @@ public class InventoryService {
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BizException("库存变动数量必须大于0");
         }
+        // 规范化可空维度：与数据库默认值对齐（location=0, batch/serial=''）
+        normalize(dim);
 
-        // 锁定库存行（按维度查找或创建）
-        Inventory inv = findOrCreate(dim);
+        // 分布式锁：按库存维度串行化，防止并发双插入/丢失更新
+        String lockKey = buildLockKey(dim);
+        if (!tryLock(lockKey)) {
+            throw new BizException(409, "库存操作繁忙，请稍后重试");
+        }
+        try {
+            return doChange(dim, direction, quantity, bizType, bizId, bizNo);
+        } finally {
+            // 在事务提交后释放锁，避免其他线程读到未提交数据
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCompletion(int status) {
+                                redisTemplate.delete(lockKey);
+                            }
+                        });
+            } else {
+                redisTemplate.delete(lockKey);
+            }
+        }
+    }
+
+    /**
+     * 尝试获取分布式锁：短暂自旋等待，最多 2 秒，每 50ms 重试
+     * 让并发请求自动排队，而非立即失败
+     */
+    private boolean tryLock(String lockKey) {
+        long deadline = System.currentTimeMillis() + 2000;
+        while (System.currentTimeMillis() < deadline) {
+            Boolean locked = redisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, "1", Duration.ofSeconds(10));
+            if (Boolean.TRUE.equals(locked)) {
+                return true;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private Inventory doChange(Inventory dim, String direction, BigDecimal quantity,
+                               String bizType, Long bizId, String bizNo) {
+        // 加锁查询已存在的行
+        Inventory inv = inventoryMapper.selectForUpdate(
+                dim.getItemId(), dim.getItemType(), dim.getWarehouseId(), dim.getStockType(),
+                dim.getLocationId(), dim.getBatchNo(), dim.getSerialNo());
+
+        if (inv == null) {
+            inv = create(dim);
+        }
 
         if ("in".equals(direction)) {
             inv.setQuantity(inv.getQuantity().add(quantity));
@@ -80,48 +145,50 @@ public class InventoryService {
     }
 
     /**
-     * 按维度查找库存行，不存在则创建
+     * 创建库存行（在分布式锁保护下，配合唯一索引兜底）
      */
-    private Inventory findOrCreate(Inventory dim) {
-        LambdaQueryWrapper<Inventory> qw = new LambdaQueryWrapper<Inventory>()
-                .eq(Inventory::getItemId, dim.getItemId())
-                .eq(Inventory::getItemType, dim.getItemType())
-                .eq(Inventory::getWarehouseId, dim.getWarehouseId())
-                .eq(Inventory::getStockType, dim.getStockType());
-        // 库位、批次、序列号可能为 null
-        if (dim.getLocationId() != null) {
-            qw.eq(Inventory::getLocationId, dim.getLocationId());
-        } else {
-            qw.isNull(Inventory::getLocationId);
+    private Inventory create(Inventory dim) {
+        Inventory newInv = new Inventory();
+        newInv.setItemId(dim.getItemId());
+        newInv.setItemType(dim.getItemType());
+        newInv.setWarehouseId(dim.getWarehouseId());
+        newInv.setLocationId(dim.getLocationId());
+        newInv.setBatchNo(dim.getBatchNo());
+        newInv.setSerialNo(dim.getSerialNo());
+        newInv.setStockType(dim.getStockType());
+        newInv.setQuantity(BigDecimal.ZERO);
+        newInv.setReservedQty(BigDecimal.ZERO);
+        newInv.setCreateTime(LocalDateTime.now());
+        newInv.setUpdateTime(LocalDateTime.now());
+        try {
+            inventoryMapper.insert(newInv);
+            return newInv;
+        } catch (DuplicateKeyException e) {
+            // 唯一索引兜底：并发插入冲突，重新加锁查询
+            Inventory retry = inventoryMapper.selectForUpdate(
+                    dim.getItemId(), dim.getItemType(), dim.getWarehouseId(), dim.getStockType(),
+                    dim.getLocationId(), dim.getBatchNo(), dim.getSerialNo());
+            if (retry == null) {
+                throw new BizException("库存行创建失败");
+            }
+            return retry;
         }
-        if (dim.getBatchNo() != null) {
-            qw.eq(Inventory::getBatchNo, dim.getBatchNo());
-        } else {
-            qw.isNull(Inventory::getBatchNo);
-        }
-        if (dim.getSerialNo() != null) {
-            qw.eq(Inventory::getSerialNo, dim.getSerialNo());
-        } else {
-            qw.isNull(Inventory::getSerialNo);
-        }
+    }
 
-        Inventory inv = inventoryMapper.selectOne(qw);
-        if (inv == null) {
-            inv = new Inventory();
-            inv.setItemId(dim.getItemId());
-            inv.setItemType(dim.getItemType());
-            inv.setWarehouseId(dim.getWarehouseId());
-            inv.setLocationId(dim.getLocationId());
-            inv.setBatchNo(dim.getBatchNo());
-            inv.setSerialNo(dim.getSerialNo());
-            inv.setStockType(dim.getStockType());
-            inv.setQuantity(BigDecimal.ZERO);
-            inv.setReservedQty(BigDecimal.ZERO);
-            inv.setCreateTime(LocalDateTime.now());
-            inv.setUpdateTime(LocalDateTime.now());
-            inventoryMapper.insert(inv);
-        }
-        return inv;
+    /** 规范化可空维度字段，与数据库默认值一致 */
+    private void normalize(Inventory dim) {
+        if (dim.getLocationId() == null) dim.setLocationId(0L);
+        if (dim.getBatchNo() == null) dim.setBatchNo("");
+        if (dim.getSerialNo() == null) dim.setSerialNo("");
+    }
+
+    /** 构建按维度加锁的 key */
+    private String buildLockKey(Inventory dim) {
+        return "inventory:lock:" + dim.getItemType() + ":" + dim.getItemId()
+                + ":" + dim.getWarehouseId() + ":" + dim.getStockType()
+                + ":" + dim.getLocationId()
+                + ":" + dim.getBatchNo()
+                + ":" + dim.getSerialNo();
     }
 
     /** 库存查询 */
