@@ -43,7 +43,7 @@ CREATE TABLE `sales_order_item` (
   `order_id`     BIGINT       NOT NULL COMMENT '销售订单ID',
   `product_id`   BIGINT       NOT NULL COMMENT '产品ID',
   `spec`         VARCHAR(128) DEFAULT NULL COMMENT '规格',
-  `unit`         VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`         VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   `quantity`     DECIMAL(18,6) NOT NULL COMMENT '数量',
   `price`        DECIMAL(18,6) NOT NULL COMMENT '含税单价',
   `tax_rate`     DECIMAL(10,2) NOT NULL DEFAULT 13 COMMENT '税率(%)',
@@ -84,7 +84,7 @@ CREATE TABLE `sales_outbound_item` (
   `batch_no`     VARCHAR(64)  DEFAULT NULL COMMENT '批次号',
   `serial_no`    VARCHAR(64)  DEFAULT NULL COMMENT '序列号',
   `quantity`     DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`         VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`         VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_outbound` (`outbound_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='销售出库明细';
@@ -127,7 +127,7 @@ CREATE TABLE `purchase_order_item` (
   `order_id`     BIGINT       NOT NULL COMMENT '采购订单ID',
   `material_id`  BIGINT       NOT NULL COMMENT '物料ID',
   `spec`         VARCHAR(128) DEFAULT NULL COMMENT '规格',
-  `unit`         VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`         VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   `quantity`     DECIMAL(18,6) NOT NULL COMMENT '数量',
   `price`        DECIMAL(18,6) NOT NULL COMMENT '含税单价',
   `tax_rate`     DECIMAL(10,2) NOT NULL DEFAULT 13 COMMENT '税率(%)',
@@ -171,7 +171,7 @@ CREATE TABLE `purchase_inbound_item` (
   `batch_no`     VARCHAR(64)  DEFAULT NULL COMMENT '批次号',
   `serial_no`    VARCHAR(64)  DEFAULT NULL COMMENT '序列号',
   `quantity`     DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`         VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`         VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_inbound` (`inbound_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='采购入库明细';
@@ -235,7 +235,7 @@ CREATE TABLE `material_issue_item` (
   `batch_no`     VARCHAR(64)  DEFAULT NULL COMMENT '批次号',
   `serial_no`    VARCHAR(64)  DEFAULT NULL COMMENT '序列号',
   `quantity`     DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`         VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`         VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_issue` (`issue_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='生产领料明细';
@@ -263,7 +263,7 @@ CREATE TABLE `material_return_item` (
   `material_id` BIGINT       NOT NULL COMMENT '物料ID',
   `location_id` BIGINT       DEFAULT NULL COMMENT '库位ID',
   `quantity`    DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`        VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`        VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_return` (`return_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='生产退料明细';
@@ -293,7 +293,7 @@ CREATE TABLE `production_inbound_item` (
   `batch_no`    VARCHAR(64)  DEFAULT NULL COMMENT '批次号',
   `serial_no`   VARCHAR(64)  DEFAULT NULL COMMENT '序列号',
   `quantity`    DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`        VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`        VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_inbound` (`inbound_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='生产入库明细';

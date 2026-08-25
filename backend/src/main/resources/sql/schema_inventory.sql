@@ -94,7 +94,7 @@ CREATE TABLE `transfer_item` (
   `item_id`     BIGINT       NOT NULL COMMENT '物料/产品ID',
   `item_type`   VARCHAR(16)  NOT NULL COMMENT '类型',
   `quantity`    DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`        VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`        VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   PRIMARY KEY (`id`),
   KEY `idx_transfer` (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨明细';

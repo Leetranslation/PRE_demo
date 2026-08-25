@@ -379,7 +379,7 @@ CREATE TABLE `bom_item` (
   `child_id`    BIGINT       NOT NULL COMMENT '子物料/子产品ID',
   `child_type`  VARCHAR(16)  NOT NULL COMMENT '子项类型：material物料/product产品',
   `quantity`    DECIMAL(18,6) NOT NULL COMMENT '数量',
-  `unit`        VARCHAR(16)  NOT NULL COMMENT '单位',
+  `unit`        VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '单位',
   `loss_rate`   DECIMAL(10,6) DEFAULT 0 COMMENT '损耗率',
   `process`     VARCHAR(64)  DEFAULT NULL COMMENT '工序',
   `sort`        INT          DEFAULT 0 COMMENT '排序',

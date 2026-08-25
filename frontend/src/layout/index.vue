@@ -40,10 +40,13 @@
           </template>
           <el-menu-item index="/purchase/order">采购订单</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/production">
-          <el-icon><Setting /></el-icon>
-          <span>生产管理</span>
-        </el-menu-item>
+        <el-sub-menu index="/production">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>生产管理</span>
+          </template>
+          <el-menu-item index="/production/order">生产工单</el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/mrp">
           <el-icon><DataAnalysis /></el-icon>
           <span>MRP 计划</span>
