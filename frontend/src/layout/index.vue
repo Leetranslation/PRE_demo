@@ -29,10 +29,13 @@
           <el-menu-item index="/base/location">库位管理</el-menu-item>
           <el-menu-item index="/base/bom">BOM 管理</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/sales">
-          <el-icon><ShoppingCart /></el-icon>
-          <span>销售管理</span>
-        </el-menu-item>
+        <el-sub-menu index="/sales">
+          <template #title>
+            <el-icon><ShoppingCart /></el-icon>
+            <span>销售管理</span>
+          </template>
+          <el-menu-item index="/sales/order">销售订单</el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="/purchase">
           <template #title>
             <el-icon><Box /></el-icon>

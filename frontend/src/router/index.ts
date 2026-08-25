@@ -74,6 +74,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/inventory/flow.vue'),
         meta: { title: '库存流水' }
       },
+      // ===== 销售 =====
+      {
+        path: 'sales/order',
+        name: 'SalesOrder',
+        component: () => import('@/views/sales/order.vue'),
+        meta: { title: '销售订单' }
+      },
       // ===== 采购 =====
       {
         path: 'purchase/order',
