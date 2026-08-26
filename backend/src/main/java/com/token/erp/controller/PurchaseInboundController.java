@@ -23,6 +23,11 @@ public class PurchaseInboundController {
         return Result.success(PageResult.of(inboundService.page(page, pageSize, orderId)));
     }
 
+    @GetMapping("/items")
+    public Result<java.util.List<com.token.erp.entity.PurchaseInboundItem>> items(@RequestParam Long inboundId) {
+        return Result.success(inboundService.items(inboundId));
+    }
+
     @PostMapping("/create")
     public Result<PurchaseInbound> create(@RequestBody PurchaseInboundRequest request) {
         return Result.success(inboundService.create(request));

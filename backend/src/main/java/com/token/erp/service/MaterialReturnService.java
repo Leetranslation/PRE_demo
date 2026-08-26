@@ -28,6 +28,23 @@ public class MaterialReturnService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
 
+    /** 退料单列表 */
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialReturn> page(
+            long page, long pageSize, Long orderId) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReturn> qw =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        if (orderId != null) qw.eq(MaterialReturn::getOrderId, orderId);
+        qw.orderByDesc(MaterialReturn::getId);
+        return returnMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize), qw);
+    }
+
+    /** 退料单明细 */
+    public java.util.List<MaterialReturnItem> items(Long returnId) {
+        return returnItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReturnItem>()
+                        .eq(MaterialReturnItem::getReturnId, returnId));
+    }
+
     @Transactional
     public MaterialReturn create(MaterialReturnRequest request) {
         ProductionOrder order = orderMapper.selectById(request.getOrderId());

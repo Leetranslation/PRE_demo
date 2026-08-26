@@ -29,6 +29,21 @@ public class MaterialIssueService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
 
+    /** 领料单列表 */
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialIssue> page(
+            long page, long pageSize, Long orderId) {
+        LambdaQueryWrapper<MaterialIssue> qw = new LambdaQueryWrapper<>();
+        if (orderId != null) qw.eq(MaterialIssue::getOrderId, orderId);
+        qw.orderByDesc(MaterialIssue::getId);
+        return issueMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize), qw);
+    }
+
+    /** 领料单明细 */
+    public List<MaterialIssueItem> items(Long issueId) {
+        return issueItemMapper.selectList(
+                new LambdaQueryWrapper<MaterialIssueItem>().eq(MaterialIssueItem::getIssueId, issueId));
+    }
+
     @Transactional
     public MaterialIssue create(MaterialIssueRequest request) {
         ProductionOrder order = orderMapper.selectById(request.getOrderId());

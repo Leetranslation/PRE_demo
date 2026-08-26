@@ -25,6 +25,9 @@ export function salesOrderUnapprove(id: number) {
 export function salesOutboundCreate(data: any) {
   return request.post('/sales/outbound/create', data)
 }
+export function salesOutboundList(params: any) {
+  return request.get('/sales/outbound/list', { params }) as Promise<PageResult<any>>
+}
 
 // 销售退货
 export function salesReturnCreate(data: any) {

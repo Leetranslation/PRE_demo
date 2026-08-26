@@ -22,10 +22,27 @@ export function productionOrderUnapprove(id: number) {
 export function materialIssueCreate(data: any) {
   return request.post('/production/issue/create', data)
 }
+export function materialIssueList(params: any) {
+  return request.get('/production/issue/list', { params }) as Promise<PageResult<any>>
+}
+export function materialIssueItems(issueId: number) {
+  return request.get('/production/issue/items', { params: { issueId } }) as Promise<any[]>
+}
 
 // 退料
 export function materialReturnCreate(data: any) {
   return request.post('/production/return/create', data)
+}
+export function materialReturnList(params: any) {
+  return request.get('/production/return/list', { params }) as Promise<PageResult<any>>
+}
+export function materialReturnItems(returnId: number) {
+  return request.get('/production/return/items', { params: { returnId } }) as Promise<any[]>
+}
+
+// 生产入库列表
+export function productionInboundList(params: any) {
+  return request.get('/production/inbound/list', { params }) as Promise<PageResult<any>>
 }
 
 // 生产入库

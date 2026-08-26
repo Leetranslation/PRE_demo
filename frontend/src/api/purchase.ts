@@ -25,6 +25,9 @@ export function purchaseOrderUnapprove(id: number) {
 export function purchaseInboundCreate(data: any) {
   return request.post('/purchase/inbound/create', data)
 }
+export function purchaseInboundList(params: any) {
+  return request.get('/purchase/inbound/list', { params }) as Promise<PageResult<any>>
+}
 
 // ===== 质检 =====
 export function qualityList(params: any) {

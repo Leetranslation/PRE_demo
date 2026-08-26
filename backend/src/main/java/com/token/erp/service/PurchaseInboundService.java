@@ -32,6 +32,12 @@ public class PurchaseInboundService {
         return inboundMapper.selectPage(new Page<>(page, pageSize), qw);
     }
 
+    /** 入库单明细 */
+    public java.util.List<PurchaseInboundItem> items(Long inboundId) {
+        return inboundItemMapper.selectList(
+                new LambdaQueryWrapper<PurchaseInboundItem>().eq(PurchaseInboundItem::getInboundId, inboundId));
+    }
+
     /**
      * 采购入库：校验 + 调库存服务
      * 质检物料 → 待检库存；非质检物料 → 可用库存

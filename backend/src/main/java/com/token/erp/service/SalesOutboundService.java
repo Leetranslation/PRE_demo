@@ -38,6 +38,12 @@ public class SalesOutboundService {
         return outboundMapper.selectPage(new Page<>(page, pageSize), qw);
     }
 
+    /** 出库单明细 */
+    public java.util.List<SalesOutboundItem> items(Long outboundId) {
+        return outboundItemMapper.selectList(
+                new LambdaQueryWrapper<SalesOutboundItem>().eq(SalesOutboundItem::getOutboundId, outboundId));
+    }
+
     @Transactional
     public SalesOutbound create(SalesOutboundRequest request) {
         SalesOrder order = orderMapper.selectById(request.getOrderId());

@@ -35,6 +35,8 @@
             <span>销售管理</span>
           </template>
           <el-menu-item index="/sales/order">销售订单</el-menu-item>
+          <el-menu-item index="/sales/outbound">销售出库单</el-menu-item>
+          <el-menu-item index="/sales/return">销售退货单</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/purchase">
           <template #title>
@@ -42,6 +44,7 @@
             <span>采购管理</span>
           </template>
           <el-menu-item index="/purchase/order">采购订单</el-menu-item>
+          <el-menu-item index="/purchase/inbound">采购入库单</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/production">
           <template #title>
@@ -49,6 +52,9 @@
             <span>生产管理</span>
           </template>
           <el-menu-item index="/production/order">生产工单</el-menu-item>
+          <el-menu-item index="/production/issue">领料单</el-menu-item>
+          <el-menu-item index="/production/return">退料单</el-menu-item>
+          <el-menu-item index="/production/inbound">生产入库单</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/mrp/index">
           <el-icon><DataAnalysis /></el-icon>

@@ -41,6 +41,12 @@ public class ProductionInboundService {
         return inboundMapper.selectPage(new Page<>(page, pageSize), qw);
     }
 
+    /** 生产入库单明细 */
+    public java.util.List<ProductionInboundItem> items(Long inboundId) {
+        return inboundItemMapper.selectList(
+                new LambdaQueryWrapper<ProductionInboundItem>().eq(ProductionInboundItem::getInboundId, inboundId));
+    }
+
     @Transactional
     public ProductionInbound create(ProductionInboundRequest request) {
         ProductionOrder order = orderMapper.selectById(request.getOrderId());

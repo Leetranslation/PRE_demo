@@ -23,6 +23,11 @@ public class ProductionInboundController {
         return Result.success(PageResult.of(inboundService.page(page, pageSize, orderId)));
     }
 
+    @GetMapping("/items")
+    public Result<java.util.List<com.token.erp.entity.ProductionInboundItem>> items(@RequestParam Long inboundId) {
+        return Result.success(inboundService.items(inboundId));
+    }
+
     @PostMapping("/create")
     public Result<ProductionInbound> create(@RequestBody ProductionInboundRequest request) {
         return Result.success(inboundService.create(request));

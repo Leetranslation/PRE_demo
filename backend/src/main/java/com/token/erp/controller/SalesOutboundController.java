@@ -26,6 +26,11 @@ public class SalesOutboundController {
         return Result.success(PageResult.of(outboundService.page(page, pageSize, orderId)));
     }
 
+    @GetMapping("/outbound/items")
+    public Result<java.util.List<com.token.erp.entity.SalesOutboundItem>> items(@RequestParam Long outboundId) {
+        return Result.success(outboundService.items(outboundId));
+    }
+
     @PostMapping("/outbound/create")
     public Result<SalesOutbound> create(@RequestBody SalesOutboundRequest request) {
         return Result.success(outboundService.create(request));

@@ -88,6 +88,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/sales/order.vue'),
         meta: { title: '销售订单' }
       },
+      {
+        path: 'sales/outbound',
+        name: 'SalesOutbound',
+        component: () => import('@/views/sales/outbound.vue'),
+        meta: { title: '销售出库单' }
+      },
+      {
+        path: 'sales/return',
+        name: 'SalesReturn',
+        component: () => import('@/views/sales/return.vue'),
+        meta: { title: '销售退货单' }
+      },
       // ===== 采购 =====
       {
         path: 'purchase/order',
@@ -95,12 +107,36 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/purchase/order.vue'),
         meta: { title: '采购订单' }
       },
+      {
+        path: 'purchase/inbound',
+        name: 'PurchaseInbound',
+        component: () => import('@/views/purchase/inbound.vue'),
+        meta: { title: '采购入库单' }
+      },
       // ===== 生产 =====
       {
         path: 'production/order',
         name: 'ProductionOrder',
         component: () => import('@/views/production/order.vue'),
         meta: { title: '生产工单' }
+      },
+      {
+        path: 'production/issue',
+        name: 'MaterialIssue',
+        component: () => import('@/views/production/issue.vue'),
+        meta: { title: '领料单' }
+      },
+      {
+        path: 'production/return',
+        name: 'MaterialReturn',
+        component: () => import('@/views/production/return.vue'),
+        meta: { title: '退料单' }
+      },
+      {
+        path: 'production/inbound',
+        name: 'ProductionInbound',
+        component: () => import('@/views/production/inbound.vue'),
+        meta: { title: '生产入库单' }
       },
       // ===== 质量 =====
       {
