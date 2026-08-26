@@ -37,10 +37,11 @@
       </el-table-column>
       <el-table-column prop="totalAmount" label="金额" width="140" align="right" />
       <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-      <el-table-column label="操作" width="320" fixed="right">
+      <el-table-column label="操作" width="360" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
+          <el-button v-if="row.approveStatus === 'approved'" link type="success" @click="openInbound(row)">入库</el-button>
           <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'pending_inbound'" link type="warning" @click="handleUnapprove(row)">反审核</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
         </template>
@@ -143,6 +144,38 @@
     </el-table>
   </el-dialog>
 
+  <!-- 入库 -->
+  <el-dialog v-model="inboundVisible" title="采购入库" width="620px">
+    <el-form :model="inboundForm" label-width="90px">
+      <el-form-item label="仓库" required>
+        <el-select v-model="inboundForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
+    </el-form>
+    <div class="item-toolbar"><span>入库明细</span><el-button size="small" type="primary" @click="addInboundItem">添加</el-button></div>
+    <el-table :data="inboundForm.items" border size="small">
+      <el-table-column label="物料" min-width="180">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <span v-if="row.materialId" class="picker-name">{{ row.materialName }}</span>
+            <span v-else class="picker-empty">未选择物料</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
+            {{ row.materialId ? '更换' : '选择物料' }}
+          </el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="数量" width="130"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="批次号" width="140"><template #default="{ row }"><el-input v-model="row.batchNo" size="small" /></template></el-table-column>
+      <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="inboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
+    </el-table>
+    <template #footer>
+      <el-button @click="inboundVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleInbound">确认入库</el-button>
+    </template>
+  </el-dialog>
+
   <!-- 物料选择弹窗 -->
   <MaterialPicker v-model="pickerVisible" @select="onMaterialSelected" />
 </template>
@@ -152,9 +185,9 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   purchaseOrderList, purchaseOrderItems, purchaseOrderCreate,
-  purchaseOrderSubmit, purchaseOrderApprove, purchaseOrderUnapprove
+  purchaseOrderSubmit, purchaseOrderApprove, purchaseOrderUnapprove, purchaseInboundCreate
 } from '@/api/purchase'
-import { supplierList } from '@/api/base'
+import { supplierList, warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import { useExport } from '@/composables/useExport'
 
@@ -173,6 +206,11 @@ const supplierLoading = ref(false)
 // 物料选择
 const pickerVisible = ref(false)
 const currentItemRow = ref<any>(null)
+// 入库
+const inboundVisible = ref(false)
+const inboundForm = reactive<any>({ orderId: undefined, warehouseId: undefined, items: [] })
+const warehouses = ref<any[]>([])
+const warehouseLoading = ref(false)
 
 // 导出
 const { selection, onSelectionChange, handleExport } = useExport(
@@ -214,6 +252,43 @@ function onMaterialSelected(material: any) {
     currentItemRow.value.spec = material.spec
     currentItemRow.value.unit = material.unit
   }
+}
+
+async function searchWarehouse(keyword: string) {
+  warehouseLoading.value = true
+  try {
+    const res = await warehouseList({ page: 1, pageSize: 20, keyword, status: 1 })
+    warehouses.value = res.records
+  } finally {
+    warehouseLoading.value = false
+  }
+}
+
+function openInbound(row: any) {
+  inboundForm.orderId = row.id
+  inboundForm.warehouseId = undefined
+  inboundForm.items = []
+  searchWarehouse('')
+  inboundVisible.value = true
+}
+
+function addInboundItem() {
+  inboundForm.items.push({ materialId: undefined, materialName: '', quantity: 0, batchNo: '' })
+}
+
+async function handleInbound() {
+  if (!inboundForm.warehouseId || !inboundForm.items.length) {
+    ElMessage.warning('请选择仓库并添加明细')
+    return
+  }
+  for (const item of inboundForm.items) {
+    if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
+    if (!item.quantity || item.quantity <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+  }
+  await purchaseInboundCreate(inboundForm)
+  ElMessage.success('入库成功')
+  inboundVisible.value = false
+  load()
 }
 
 function approveText(v: string) {
@@ -318,4 +393,7 @@ load()
 .material-name { font-weight: 500; color: #333; }
 .material-spec { font-size: 12px; color: #999; }
 .material-empty { font-size: 12px; color: #c0c4cc; }
+.picker-cell { display: flex; flex-direction: column; margin-bottom: 2px; }
+.picker-name { font-weight: 500; color: #333; }
+.picker-empty { font-size: 12px; color: #c0c4cc; }
 </style>

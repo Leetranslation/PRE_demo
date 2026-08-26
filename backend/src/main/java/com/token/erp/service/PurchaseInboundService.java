@@ -64,8 +64,15 @@ public class PurchaseInboundService {
 
         for (PurchaseInboundItem item : request.getItems()) {
             if (item.getMaterialId() == null) throw new BizException("物料不能为空");
-            PurchaseOrderItem orderItem = orderItemMapper.selectById(item.getOrderItemId());
-            if (orderItem == null) throw new BizException("订单明细不存在");
+            PurchaseOrderItem orderItem = item.getOrderItemId() != null
+                    ? orderItemMapper.selectById(item.getOrderItemId())
+                    : orderItemMapper.selectOne(
+                            new LambdaQueryWrapper<PurchaseOrderItem>()
+                                    .eq(PurchaseOrderItem::getOrderId, request.getOrderId())
+                                    .eq(PurchaseOrderItem::getMaterialId, item.getMaterialId())
+                                    .orderByAsc(PurchaseOrderItem::getId)
+                                    .last("LIMIT 1"));
+            if (orderItem == null) throw new BizException("订单中不存在该物料");
 
             // 校验：入库数量 ≤ 未入库数量（禁止超收）
             BigDecimal unInbound = orderItem.getQuantity().subtract(
@@ -73,6 +80,8 @@ public class PurchaseInboundService {
             if (item.getQuantity().compareTo(unInbound) > 0) {
                 throw new BizException("入库数量超过未入库数量，当前可入库：" + unInbound);
             }
+            // 补全 orderItemId
+            item.setOrderItemId(orderItem.getId());
 
             // 判断是否质检物料
             Material material = materialMapper.selectById(item.getMaterialId());

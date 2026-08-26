@@ -63,8 +63,14 @@ public class SalesOutboundService {
         for (SalesOutboundItem item : request.getItems()) {
             if (item.getProductId() == null) throw new BizException("产品不能为空");
             SalesOrderItem orderItem = item.getOrderItemId() != null
-                    ? orderItemMapper.selectById(item.getOrderItemId()) : null;
-            if (orderItem == null) throw new BizException("订单明细不存在");
+                    ? orderItemMapper.selectById(item.getOrderItemId())
+                    : orderItemMapper.selectOne(
+                            new LambdaQueryWrapper<SalesOrderItem>()
+                                    .eq(SalesOrderItem::getOrderId, request.getOrderId())
+                                    .eq(SalesOrderItem::getProductId, item.getProductId())
+                                    .orderByAsc(SalesOrderItem::getId)
+                                    .last("LIMIT 1"));
+            if (orderItem == null) throw new BizException("订单中不存在该产品");
 
             // 校验：出库 ≤ 未出库数量（禁止超发）
             BigDecimal unOutbound = orderItem.getQuantity().subtract(
@@ -72,6 +78,8 @@ public class SalesOutboundService {
             if (item.getQuantity().compareTo(unOutbound) > 0) {
                 throw new BizException("出库数量超过未出库数量，当前可出库：" + unOutbound);
             }
+            // 补全 orderItemId
+            item.setOrderItemId(orderItem.getId());
 
             // 调库存服务出库
             Inventory dim = new Inventory();
