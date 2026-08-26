@@ -15,7 +15,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe>
       <el-table-column prop="inspectionNo" label="质检单号" width="170" />
-      <el-table-column prop="itemId" label="物料/产品ID" width="120" />
+      <el-table-column prop="itemId" label="物料/产品ID" min-width="140" />
       <el-table-column prop="warehouseId" label="仓库ID" width="100" />
       <el-table-column prop="quantity" label="质检数量" width="110" align="right" />
       <el-table-column prop="inspectionDate" label="质检日期" width="120" />

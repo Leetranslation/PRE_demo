@@ -27,3 +27,11 @@ body,
   --el-color-primary-light-9: #fbe5e5;
   --el-color-primary-dark-2: #b12727;
 }
+
+/* 让 el-table 铺满容器，避免内容少时只占一半 */
+.el-table {
+  width: 100% !important;
+}
+.el-table__inner-wrapper {
+  width: 100% !important;
+}

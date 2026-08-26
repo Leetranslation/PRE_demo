@@ -19,12 +19,12 @@ request.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// 响应拦截：统一处理 code
+// 响应拦截：统一处理 code，成功时直接返回 data
 request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code === 0) {
-      return res
+      return res.data
     }
     ElMessage.error(res.message || '请求失败')
     return Promise.reject(new Error(res.message || '请求失败'))

@@ -30,7 +30,7 @@
       <el-table-column prop="itemId" label="物料/产品ID" width="120" />
       <el-table-column prop="warehouseId" label="仓库ID" width="100" />
       <el-table-column prop="batchNo" label="批次号" width="130" />
-      <el-table-column prop="serialNo" label="序列号" width="130" />
+      <el-table-column prop="serialNo" label="序列号" min-width="160" />
       <el-table-column label="库存类型" width="100">
         <template #default="{ row }">
           <el-tag :type="stockTagType(row.stockType)">{{ stockText(row.stockType) }}</el-tag>

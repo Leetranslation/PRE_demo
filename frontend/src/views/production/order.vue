@@ -34,6 +34,7 @@
       <el-table-column label="业务状态" width="100">
         <template #default="{ row }">{{ bizText(row.bizStatus) }}</template>
       </el-table-column>
+      <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
       <el-table-column label="操作" width="340" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
@@ -60,7 +61,13 @@
   <!-- 新增工单 -->
   <el-dialog v-model="createVisible" title="新增生产工单" width="560px">
     <el-form :model="form" label-width="100px">
-      <el-form-item label="产品ID" required><el-input-number v-model="form.productId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="产品" required>
+        <el-input v-model="form.productName" placeholder="点击选择产品" readonly style="width: 100%">
+          <template #append>
+            <el-button @click="openProductPickerForMain">选择</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
       <el-form-item label="生产数量" required><el-input-number v-model="form.quantity" :min="1" :precision="6" style="width: 100%" /></el-form-item>
       <el-form-item label="生产类型">
         <el-select v-model="form.productionType" style="width: 100%">
@@ -86,7 +93,17 @@
     </el-form>
     <div class="item-toolbar"><span>领料明细</span><el-button size="small" type="primary" @click="addIssueItem">添加</el-button></div>
     <el-table :data="issueForm.items" border size="small">
-      <el-table-column label="物料ID" width="120"><template #default="{ row }"><el-input-number v-model="row.materialId" :min="1" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="物料" min-width="200">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <span v-if="row.materialId" class="picker-name">{{ row.materialName }}</span>
+            <span v-else class="picker-empty">未选择物料</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
+            {{ row.materialId ? '更换' : '选择物料' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="批次号" width="140"><template #default="{ row }"><el-input v-model="row.batchNo" size="small" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="issueForm.items.splice($index,1)">删除</el-button></template></el-table-column>
@@ -104,7 +121,17 @@
     </el-form>
     <div class="item-toolbar"><span>退料明细</span><el-button size="small" type="primary" @click="addReturnItem">添加</el-button></div>
     <el-table :data="returnForm.items" border size="small">
-      <el-table-column label="物料ID" width="120"><template #default="{ row }"><el-input-number v-model="row.materialId" :min="1" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="物料" min-width="200">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <span v-if="row.materialId" class="picker-name">{{ row.materialName }}</span>
+            <span v-else class="picker-empty">未选择物料</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
+            {{ row.materialId ? '更换' : '选择物料' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="returnForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -121,7 +148,17 @@
     </el-form>
     <div class="item-toolbar"><span>入库明细</span><el-button size="small" type="primary" @click="addInboundItem">添加</el-button></div>
     <el-table :data="inboundForm.items" border size="small">
-      <el-table-column label="产品ID" width="120"><template #default="{ row }"><el-input-number v-model="row.productId" :min="1" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="产品" min-width="200">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <span v-if="row.productId" class="picker-name">{{ row.productName }}</span>
+            <span v-else class="picker-empty">未选择产品</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openProductPicker(row)">
+            {{ row.productId ? '更换' : '选择产品' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="inboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -130,6 +167,10 @@
       <el-button type="primary" @click="handleInbound">确认入库</el-button>
     </template>
   </el-dialog>
+
+  <!-- 物料/产品选择弹窗 -->
+  <MaterialPicker v-model="materialPickerVisible" @select="onMaterialSelected" />
+  <ProductPicker v-model="productPickerVisible" @select="onProductSelected" />
 </template>
 
 <script setup lang="ts">
@@ -139,6 +180,8 @@ import {
   productionOrderList, productionOrderCreate, productionOrderSubmit,
   productionOrderApprove, materialIssueCreate, materialReturnCreate, productionInboundCreate
 } from '@/api/production'
+import MaterialPicker from '@/components/MaterialPicker.vue'
+import ProductPicker from '@/components/ProductPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -155,9 +198,51 @@ const issueForm = reactive<any>({ orderId: undefined, warehouseId: undefined, it
 const returnForm = reactive<any>({ orderId: undefined, warehouseId: undefined, items: [] })
 const inboundForm = reactive<any>({ orderId: undefined, warehouseId: undefined, items: [] })
 
+// 物料/产品选择
+const materialPickerVisible = ref(false)
+const productPickerVisible = ref(false)
+const currentMaterialRow = ref<any>(null)
+const currentProductRow = ref<any>(null)
+const isMainProduct = ref(false)
+
 function approveText(v: string) { return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v }
 function approveTagType(v: string) { return { pending: 'info', approving: 'warning', approved: 'success' }[v] || 'info' }
 function bizText(v: string) { return { pending: '待生产', producing: '生产中', partial: '部分完成', completed: '已完成' }[v] || v }
+
+function openProductPickerForMain() {
+  isMainProduct.value = true
+  productPickerVisible.value = true
+}
+
+function openProductPicker(row: any) {
+  isMainProduct.value = false
+  currentProductRow.value = row
+  productPickerVisible.value = true
+}
+
+function openMaterialPicker(row: any) {
+  currentMaterialRow.value = row
+  materialPickerVisible.value = true
+}
+
+function onProductSelected(product: any) {
+  if (isMainProduct.value) {
+    form.productId = product.id
+    form.productName = product.name
+  } else if (currentProductRow.value) {
+    currentProductRow.value.productId = product.id
+    currentProductRow.value.productName = product.name
+    currentProductRow.value.unit = product.unit
+  }
+}
+
+function onMaterialSelected(material: any) {
+  if (currentMaterialRow.value) {
+    currentMaterialRow.value.materialId = material.id
+    currentMaterialRow.value.materialName = material.name
+    currentMaterialRow.value.unit = material.unit
+  }
+}
 
 async function load() {
   loading.value = true
@@ -203,9 +288,12 @@ function openIssue(row: any) {
   issueForm.items = []
   issueVisible.value = true
 }
-function addIssueItem() { issueForm.items.push({ materialId: undefined, quantity: 0, batchNo: '' }) }
+function addIssueItem() { issueForm.items.push({ materialId: undefined, materialName: '', quantity: 0, batchNo: '' }) }
 async function handleIssue() {
   if (!issueForm.warehouseId || !issueForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
+  for (const item of issueForm.items) {
+    if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
+  }
   await materialIssueCreate(issueForm)
   ElMessage.success('领料成功')
   issueVisible.value = false
@@ -218,9 +306,12 @@ function openReturn(row: any) {
   returnForm.items = []
   returnVisible.value = true
 }
-function addReturnItem() { returnForm.items.push({ materialId: undefined, quantity: 0 }) }
+function addReturnItem() { returnForm.items.push({ materialId: undefined, materialName: '', quantity: 0 }) }
 async function handleReturn() {
   if (!returnForm.warehouseId || !returnForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
+  for (const item of returnForm.items) {
+    if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
+  }
   await materialReturnCreate(returnForm)
   ElMessage.success('退料成功')
   returnVisible.value = false
@@ -233,9 +324,12 @@ function openInbound(row: any) {
   inboundForm.items = []
   inboundVisible.value = true
 }
-function addInboundItem() { inboundForm.items.push({ productId: undefined, quantity: 0 }) }
+function addInboundItem() { inboundForm.items.push({ productId: undefined, productName: '', quantity: 0 }) }
 async function handleInbound() {
   if (!inboundForm.warehouseId || !inboundForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
+  for (const item of inboundForm.items) {
+    if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
+  }
   await productionInboundCreate(inboundForm)
   ElMessage.success('入库成功')
   inboundVisible.value = false
@@ -250,4 +344,7 @@ load()
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
 .item-toolbar { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
+.picker-cell { display: flex; flex-direction: column; margin-bottom: 2px; }
+.picker-name { font-weight: 500; color: #333; }
+.picker-empty { font-size: 12px; color: #c0c4cc; }
 </style>

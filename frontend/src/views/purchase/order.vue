@@ -22,19 +22,20 @@
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe>
-      <el-table-column prop="orderNo" label="采购单号" width="170" />
-      <el-table-column prop="supplierId" label="供应商ID" width="100" />
-      <el-table-column prop="orderDate" label="订单日期" width="120" />
-      <el-table-column label="审批状态" width="100">
+      <el-table-column prop="orderNo" label="采购单号" width="200" />
+      <el-table-column prop="supplierId" label="供应商ID" min-width="120" />
+      <el-table-column prop="orderDate" label="订单日期" width="140" />
+      <el-table-column label="审批状态" width="120">
         <template #default="{ row }">
           <el-tag :type="approveTagType(row.approveStatus)">{{ approveText(row.approveStatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="业务状态" width="100">
+      <el-table-column label="业务状态" width="120">
         <template #default="{ row }">{{ bizText(row.bizStatus) }}</template>
       </el-table-column>
-      <el-table-column prop="totalAmount" label="金额" width="120" align="right" />
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column prop="totalAmount" label="金额" width="140" align="right" />
+      <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+      <el-table-column label="操作" width="320" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
@@ -60,7 +61,13 @@
   <el-dialog v-model="dialogVisible" title="新增采购单" width="820px">
     <el-form :model="form" label-width="90px">
       <el-row :gutter="12">
-        <el-col :span="12"><el-form-item label="供应商ID" required><el-input-number v-model="form.supplierId" :min="1" style="width: 100%" /></el-form-item></el-col>
+        <el-col :span="12">
+          <el-form-item label="供应商" required>
+            <el-select v-model="form.supplierId" filterable remote :remote-method="searchSupplier" :loading="supplierLoading" placeholder="搜索供应商" clearable style="width: 100%">
+              <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id" />
+            </el-select>
+          </el-form-item>
+        </el-col>
         <el-col :span="12"><el-form-item label="采购类型">
           <el-select v-model="form.purchaseType" style="width: 100%">
             <el-option label="备货采购" value="stock" />
@@ -79,8 +86,21 @@
       <el-button size="small" type="primary" @click="addItem">添加明细</el-button>
     </div>
     <el-table :data="form.items" border size="small">
-      <el-table-column label="物料ID" width="110">
-        <template #default="{ row }"><el-input-number v-model="row.materialId" :min="1" size="small" style="width: 100%" /></template>
+      <el-table-column label="物料" min-width="220">
+        <template #default="{ row }">
+          <div class="material-cell">
+            <template v-if="row.materialId">
+              <span class="material-name">{{ row.materialName }}</span>
+              <span class="material-spec">{{ row.spec }}</span>
+            </template>
+            <template v-else>
+              <span class="material-empty">未选择物料</span>
+            </template>
+          </div>
+          <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
+            {{ row.materialId ? '更换' : '选择物料' }}
+          </el-button>
+        </template>
       </el-table-column>
       <el-table-column label="数量" width="120">
         <template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width: 100%" /></template>
@@ -92,7 +112,7 @@
         <template #default="{ row }"><el-input-number v-model="row.taxRate" :min="0" :precision="2" size="small" style="width: 100%" /></template>
       </el-table-column>
       <el-table-column label="单位" width="90">
-        <template #default="{ row }"><el-input v-model="row.unit" size="small" /></template>
+        <template #default="{ row }">{{ row.unit }}</template>
       </el-table-column>
       <el-table-column label="价税合计" width="120" align="right">
         <template #default="{ row }">{{ calcTotal(row) }}</template>
@@ -120,6 +140,9 @@
       <el-table-column prop="inboundQty" label="已入库" width="100" />
     </el-table>
   </el-dialog>
+
+  <!-- 物料选择弹窗 -->
+  <MaterialPicker v-model="pickerVisible" @select="onMaterialSelected" />
 </template>
 
 <script setup lang="ts">
@@ -129,6 +152,8 @@ import {
   purchaseOrderList, purchaseOrderItems, purchaseOrderCreate,
   purchaseOrderSubmit, purchaseOrderApprove, purchaseOrderUnapprove
 } from '@/api/purchase'
+import { supplierList } from '@/api/base'
+import MaterialPicker from '@/components/MaterialPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -138,6 +163,37 @@ const itemsVisible = ref(false)
 const items = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 const form = reactive<any>({ items: [] })
+
+// 供应商下拉
+const suppliers = ref<any[]>([])
+const supplierLoading = ref(false)
+// 物料选择
+const pickerVisible = ref(false)
+const currentItemRow = ref<any>(null)
+
+async function searchSupplier(keyword: string) {
+  supplierLoading.value = true
+  try {
+    const res = await supplierList({ page: 1, pageSize: 20, keyword, status: 1 })
+    suppliers.value = res.records
+  } finally {
+    supplierLoading.value = false
+  }
+}
+
+function openMaterialPicker(row: any) {
+  currentItemRow.value = row
+  pickerVisible.value = true
+}
+
+function onMaterialSelected(material: any) {
+  if (currentItemRow.value) {
+    currentItemRow.value.materialId = material.id
+    currentItemRow.value.materialName = material.name
+    currentItemRow.value.spec = material.spec
+    currentItemRow.value.unit = material.unit
+  }
+}
 
 function approveText(v: string) {
   return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v
@@ -170,17 +226,32 @@ function openDialog() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   form.purchaseType = 'stock'
+  searchSupplier('')
   dialogVisible.value = true
 }
 
 function addItem() {
-  form.items.push({ materialId: undefined, quantity: 0, price: 0, taxRate: 13, unit: '' })
+  form.items.push({ materialId: undefined, materialName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' })
 }
 
 async function handleSave() {
-  if (!form.supplierId || !form.items.length) {
-    ElMessage.warning('请填写供应商并至少添加一条明细')
+  if (!form.supplierId) {
+    ElMessage.warning('请选择供应商')
     return
+  }
+  if (!form.items.length) {
+    ElMessage.warning('请至少添加一条明细')
+    return
+  }
+  for (const item of form.items) {
+    if (!item.materialId) {
+      ElMessage.warning('存在未选择物料的明细行')
+      return
+    }
+    if (!item.quantity || item.quantity <= 0) {
+      ElMessage.warning('存在数量未填或为0的明细行')
+      return
+    }
   }
   await purchaseOrderCreate(form)
   ElMessage.success('保存成功')
@@ -222,4 +293,8 @@ load()
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
 .item-toolbar { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
+.material-cell { display: flex; flex-direction: column; margin-bottom: 2px; }
+.material-name { font-weight: 500; color: #333; }
+.material-spec { font-size: 12px; color: #999; }
+.material-empty { font-size: 12px; color: #c0c4cc; }
 </style>

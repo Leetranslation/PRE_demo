@@ -33,7 +33,8 @@
       <el-table-column label="业务状态" width="100">
         <template #default="{ row }">{{ bizText(row.bizStatus) }}</template>
       </el-table-column>
-      <el-table-column prop="totalAmount" label="金额" width="120" align="right" />
+      <el-table-column prop="totalAmount" label="金额" width="140" align="right" />
+      <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
       <el-table-column label="操作" width="300" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
@@ -61,7 +62,13 @@
   <el-dialog v-model="createVisible" title="新增销售单" width="800px">
     <el-form :model="form" label-width="90px">
       <el-row :gutter="12">
-        <el-col :span="12"><el-form-item label="客户ID" required><el-input-number v-model="form.customerId" :min="1" style="width: 100%" /></el-form-item></el-col>
+        <el-col :span="12">
+          <el-form-item label="客户" required>
+            <el-select v-model="form.customerId" filterable remote :remote-method="searchCustomer" :loading="customerLoading" placeholder="搜索客户" clearable style="width: 100%">
+              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
+        </el-col>
         <el-col :span="12"><el-form-item label="销售类型">
           <el-select v-model="form.salesType" style="width: 100%">
             <el-option label="普通销售" value="normal" />
@@ -74,11 +81,24 @@
     </el-form>
     <div class="item-toolbar"><span>销售明细</span><el-button size="small" type="primary" @click="addItem">添加明细</el-button></div>
     <el-table :data="form.items" border size="small">
-      <el-table-column label="产品ID" width="110"><template #default="{ row }"><el-input-number v-model="row.productId" :min="1" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="产品" min-width="200">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <template v-if="row.productId">
+              <span class="picker-name">{{ row.productName }}</span>
+              <span class="picker-spec">{{ row.spec }}</span>
+            </template>
+            <span v-else class="picker-empty">未选择产品</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openProductPicker(row)">
+            {{ row.productId ? '更换' : '选择产品' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="数量" width="120"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="含税单价" width="130"><template #default="{ row }"><el-input-number v-model="row.price" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="税率%" width="100"><template #default="{ row }"><el-input-number v-model="row.taxRate" :min="0" :precision="2" size="small" style="width:100%" /></template></el-table-column>
-      <el-table-column label="单位" width="90"><template #default="{ row }"><el-input v-model="row.unit" size="small" /></template></el-table-column>
+      <el-table-column label="单位" width="90"><template #default="{ row }">{{ row.unit }}</template></el-table-column>
       <el-table-column label="价税合计" width="110" align="right"><template #default="{ row }">{{ ((row.quantity||0)*(row.price||0)).toFixed(2) }}</template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="form.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -131,6 +151,9 @@
       <el-table-column prop="outboundQty" label="已出库" width="100" />
     </el-table>
   </el-dialog>
+
+  <!-- 产品选择弹窗 -->
+  <ProductPicker v-model="productPickerVisible" @select="onProductSelected" />
 </template>
 
 <script setup lang="ts">
@@ -140,6 +163,8 @@ import {
   salesOrderList, salesOrderItems, salesOrderCreate, salesOrderSubmit,
   salesOrderApprove, salesOutboundCreate, salesReturnCreate
 } from '@/api/sales'
+import { customerList } from '@/api/base'
+import ProductPicker from '@/components/ProductPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -147,6 +172,37 @@ const total = ref(0)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 
 const createVisible = ref(false)
+
+// 客户下拉
+const customers = ref<any[]>([])
+const customerLoading = ref(false)
+// 产品选择
+const productPickerVisible = ref(false)
+const currentProductRow = ref<any>(null)
+
+async function searchCustomer(keyword: string) {
+  customerLoading.value = true
+  try {
+    const res = await customerList({ page: 1, pageSize: 20, keyword, status: 1 })
+    customers.value = res.records
+  } finally {
+    customerLoading.value = false
+  }
+}
+
+function openProductPicker(row: any) {
+  currentProductRow.value = row
+  productPickerVisible.value = true
+}
+
+function onProductSelected(product: any) {
+  if (currentProductRow.value) {
+    currentProductRow.value.productId = product.id
+    currentProductRow.value.productName = product.name
+    currentProductRow.value.spec = product.spec
+    currentProductRow.value.unit = product.unit
+  }
+}
 const outboundVisible = ref(false)
 const returnVisible = ref(false)
 const itemsVisible = ref(false)
@@ -177,11 +233,17 @@ function openCreate() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   form.salesType = 'normal'
+  searchCustomer('')
   createVisible.value = true
 }
-function addItem() { form.items.push({ productId: undefined, quantity: 0, price: 0, taxRate: 13, unit: '' }) }
+function addItem() { form.items.push({ productId: undefined, productName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' }) }
 async function handleCreate() {
-  if (!form.customerId || !form.items.length) { ElMessage.warning('请填写客户和明细'); return }
+  if (!form.customerId) { ElMessage.warning('请选择客户'); return }
+  if (!form.items.length) { ElMessage.warning('请至少添加一条明细'); return }
+  for (const item of form.items) {
+    if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
+    if (!item.quantity || item.quantity <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+  }
   await salesOrderCreate(form)
   ElMessage.success('保存成功')
   createVisible.value = false
@@ -243,4 +305,8 @@ load()
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
 .item-toolbar { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
+.picker-cell { display: flex; flex-direction: column; margin-bottom: 2px; }
+.picker-name { font-weight: 500; color: #333; }
+.picker-spec { font-size: 12px; color: #999; }
+.picker-empty { font-size: 12px; color: #c0c4cc; }
 </style>

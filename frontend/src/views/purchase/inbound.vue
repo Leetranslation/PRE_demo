@@ -34,7 +34,7 @@ function fetchList(params: any) {
 
 async function fetchItems(id: number) {
   const res: any = await request.get('/purchase/inbound/items', { params: { inboundId: id } })
-  return res.data || []
+  return res || []
 }
 
 function showDetail(items: any[]) {

@@ -48,8 +48,12 @@
         <el-col :span="12"><el-form-item label="名称"><el-input v-model="form.name" /></el-form-item></el-col>
         <el-col :span="12"><el-form-item label="版本"><el-input v-model="form.version" placeholder="如 V1.0" /></el-form-item></el-col>
         <el-col :span="12">
-          <el-form-item label="产品ID" required>
-            <el-input-number v-model="form.productId" :min="1" style="width: 100%" />
+          <el-form-item label="产品" required>
+            <el-input v-model="form.productName" placeholder="点击选择产品" readonly style="width: 100%">
+              <template #append>
+                <el-button @click="openProductPickerForMain">选择</el-button>
+              </template>
+            </el-input>
           </el-form-item>
         </el-col>
       </el-row>
@@ -68,9 +72,15 @@
           </el-select>
         </template>
       </el-table-column>
-      <el-table-column label="子项ID" width="120">
+      <el-table-column label="子项" min-width="180">
         <template #default="{ row }">
-          <el-input-number v-model="row.childId" :min="1" size="small" style="width: 100%" />
+          <div class="picker-cell">
+            <span v-if="row.childId" class="picker-name">{{ row.childName }}</span>
+            <span v-else class="picker-empty">未选择</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openChildPicker(row)">
+            {{ row.childId ? '更换' : '选择' }}
+          </el-button>
         </template>
       </el-table-column>
       <el-table-column label="数量" width="130">
@@ -117,12 +127,18 @@
       <el-table-column prop="process" label="工序" min-width="120" />
     </el-table>
   </el-dialog>
+
+  <!-- 物料/产品选择弹窗 -->
+  <MaterialPicker v-model="materialPickerVisible" @select="onMaterialSelected" />
+  <ProductPicker v-model="productPickerVisible" @select="onProductSelected" />
 </template>
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { bomList, bomCreate, bomItems } from '@/api/base'
+import MaterialPicker from '@/components/MaterialPicker.vue'
+import ProductPicker from '@/components/ProductPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -132,6 +148,46 @@ const itemsVisible = ref(false)
 const items = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '' })
 const form = reactive<any>({ items: [] })
+
+// 选择器
+const materialPickerVisible = ref(false)
+const productPickerVisible = ref(false)
+const currentChildRow = ref<any>(null)
+const isMainProduct = ref(false)
+
+function openProductPickerForMain() {
+  isMainProduct.value = true
+  productPickerVisible.value = true
+}
+
+function openChildPicker(row: any) {
+  isMainProduct.value = false
+  currentChildRow.value = row
+  if (row.childType === 'product') {
+    productPickerVisible.value = true
+  } else {
+    materialPickerVisible.value = true
+  }
+}
+
+function onProductSelected(product: any) {
+  if (isMainProduct.value) {
+    form.productId = product.id
+    form.productName = product.name
+  } else if (currentChildRow.value) {
+    currentChildRow.value.childId = product.id
+    currentChildRow.value.childName = product.name
+    currentChildRow.value.unit = product.unit
+  }
+}
+
+function onMaterialSelected(material: any) {
+  if (currentChildRow.value) {
+    currentChildRow.value.childId = material.id
+    currentChildRow.value.childName = material.name
+    currentChildRow.value.unit = material.unit
+  }
+}
 
 async function load() {
   loading.value = true
@@ -152,18 +208,33 @@ function openDialog() {
   form.name = ''
   form.version = ''
   form.productId = undefined
+  form.productName = ''
   form.items = []
   dialogVisible.value = true
 }
 
 function addItem() {
-  form.items.push({ childType: 'material', childId: undefined, quantity: 0, unit: '', lossRate: 0, process: '' })
+  form.items.push({ childType: 'material', childId: undefined, childName: '', quantity: 0, unit: '', lossRate: 0, process: '' })
 }
 
 async function handleSave() {
-  if (!form.productId || !form.items.length) {
-    ElMessage.warning('请填写产品并至少添加一条明细')
+  if (!form.productId) {
+    ElMessage.warning('请选择产品')
     return
+  }
+  if (!form.items.length) {
+    ElMessage.warning('请至少添加一条明细')
+    return
+  }
+  for (const item of form.items) {
+    if (!item.childId) {
+      ElMessage.warning('存在未选择子项的明细行')
+      return
+    }
+    if (!item.quantity || item.quantity <= 0) {
+      ElMessage.warning('存在数量未填或为0的明细行')
+      return
+    }
   }
   await bomCreate(form)
   ElMessage.success('保存成功')
@@ -189,4 +260,7 @@ load()
   align-items: center;
   margin: 8px 0;
 }
+.picker-cell { display: flex; flex-direction: column; margin-bottom: 2px; }
+.picker-name { font-weight: 500; color: #333; }
+.picker-empty { font-size: 12px; color: #c0c4cc; }
 </style>
