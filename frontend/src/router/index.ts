@@ -144,6 +144,25 @@ const routes: RouteRecordRaw[] = [
         name: 'Quality',
         component: () => import('@/views/quality/index.vue'),
         meta: { title: '质量检验' }
+      },
+      // ===== 系统管理 =====
+      {
+        path: 'system/user',
+        name: 'SystemUser',
+        component: () => import('@/views/system/user.vue'),
+        meta: { title: '用户管理' }
+      },
+      {
+        path: 'system/role',
+        name: 'SystemRole',
+        component: () => import('@/views/system/role.vue'),
+        meta: { title: '角色管理' }
+      },
+      {
+        path: 'system/department',
+        name: 'SystemDepartment',
+        component: () => import('@/views/system/department.vue'),
+        meta: { title: '部门管理' }
       }
     ]
   }
