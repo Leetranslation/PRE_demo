@@ -19,9 +19,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">新增销售单</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="销售单号" width="170" />
       <el-table-column prop="customerId" label="客户ID" width="90" />
       <el-table-column prop="orderDate" label="订单日期" width="120" />
@@ -165,6 +167,7 @@ import {
 } from '@/api/sales'
 import { customerList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -179,6 +182,23 @@ const customerLoading = ref(false)
 // 产品选择
 const productPickerVisible = ref(false)
 const currentProductRow = ref<any>(null)
+// 导出
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'orderNo', label: '销售单号' },
+    { prop: 'customerId', label: '客户ID' },
+    { prop: 'orderDate', label: '订单日期' },
+    { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },
+    { prop: 'bizStatus', label: '业务状态', formatter: (row: any) => bizText(row.bizStatus) },
+    { prop: 'totalAmount', label: '金额' },
+    { prop: 'remark', label: '备注' }
+  ],
+  '销售订单'
+)
+
+function doExport() {
+  handleExport(records.value)
+}
 
 async function searchCustomer(keyword: string) {
   customerLoading.value = true

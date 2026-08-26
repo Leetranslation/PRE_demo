@@ -1,6 +1,10 @@
 <template>
   <el-card shadow="never">
-    <el-table :data="records" v-loading="loading" border stripe>
+    <div class="toolbar">
+      <el-button @click="doExport">导出</el-button>
+    </div>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="createTime" label="退货时间" width="170" />
       <el-table-column prop="itemId" label="产品ID" width="110" />
       <el-table-column prop="warehouseId" label="仓库ID" width="90" />
@@ -28,11 +32,24 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { inventoryTx } from '@/api/inventory'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ page: 1, pageSize: 10 })
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'createTime', label: '退货时间' },
+    { prop: 'itemId', label: '产品ID' },
+    { prop: 'warehouseId', label: '仓库ID' },
+    { prop: 'quantity', label: '退货数量' },
+    { prop: 'bizNo', label: '来源销售单号' }
+  ],
+  '销售退货单'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true
@@ -49,5 +66,6 @@ load()
 </script>
 
 <style scoped>
+.toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
 </style>

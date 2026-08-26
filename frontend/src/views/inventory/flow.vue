@@ -19,10 +19,12 @@
       <el-form-item>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="handleReset">重置</el-button>
+        <el-button @click="doExport">导出</el-button>
       </el-form-item>
     </el-form>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column label="时间" width="170">
         <template #default="{ row }">{{ row.createTime }}</template>
       </el-table-column>
@@ -67,6 +69,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { inventoryTx } from '@/api/inventory'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -74,6 +77,23 @@ const total = ref(0)
 const query = reactive({
   page: 1, pageSize: 10, itemId: undefined as number | undefined, bizType: undefined as string | undefined
 })
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'createTime', label: '时间' },
+    { prop: 'direction', label: '方向', formatter: (row: any) => (row.direction === 'in' ? '入库' : '出库') },
+    { prop: 'itemType', label: '类型', formatter: (row: any) => (row.itemType === 'material' ? '物料' : '产品') },
+    { prop: 'itemId', label: '物料/产品ID' },
+    { prop: 'warehouseId', label: '仓库ID' },
+    { prop: 'batchNo', label: '批次号' },
+    { prop: 'quantity', label: '变动数量' },
+    { prop: 'balanceQty', label: '结存数量' },
+    { prop: 'bizType', label: '业务类型' },
+    { prop: 'bizNo', label: '单据编号' }
+  ],
+  '库存流水'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true

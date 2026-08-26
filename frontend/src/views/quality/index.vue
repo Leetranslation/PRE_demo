@@ -10,10 +10,12 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="doExport">导出</el-button>
       </el-form-item>
     </el-form>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="inspectionNo" label="质检单号" width="170" />
       <el-table-column prop="itemId" label="物料/产品ID" min-width="140" />
       <el-table-column prop="warehouseId" label="仓库ID" width="100" />
@@ -53,11 +55,25 @@
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { qualityList, qualityJudge } from '@/api/purchase'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ page: 1, pageSize: 10, result: undefined as string | undefined })
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'inspectionNo', label: '质检单号' },
+    { prop: 'itemId', label: '物料/产品ID' },
+    { prop: 'warehouseId', label: '仓库ID' },
+    { prop: 'quantity', label: '质检数量' },
+    { prop: 'inspectionDate', label: '质检日期' },
+    { prop: 'result', label: '结果', formatter: (row: any) => ({ qualified: '合格', unqualified: '不合格' }[row.result] || '待判定') }
+  ],
+  '质检单'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true

@@ -20,10 +20,12 @@
       <el-form-item>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="handleReset">重置</el-button>
+        <el-button @click="doExport">导出</el-button>
       </el-form-item>
     </el-form>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="itemType" label="类型" width="80">
         <template #default="{ row }">{{ row.itemType === 'material' ? '物料' : '产品' }}</template>
       </el-table-column>
@@ -61,6 +63,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { inventoryList } from '@/api/inventory'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -76,6 +79,21 @@ function stockText(v: string) {
 function stockTagType(v: string) {
   return { available: 'success', pending_qc: 'warning', unqualified: 'danger' }[v] || 'info'
 }
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'itemType', label: '类型', formatter: (row: any) => (row.itemType === 'material' ? '物料' : '产品') },
+    { prop: 'itemId', label: '物料/产品ID' },
+    { prop: 'warehouseId', label: '仓库ID' },
+    { prop: 'batchNo', label: '批次号' },
+    { prop: 'serialNo', label: '序列号' },
+    { prop: 'stockType', label: '库存类型', formatter: (row: any) => stockText(row.stockType) },
+    { prop: 'quantity', label: '实际数量' },
+    { prop: 'reservedQty', label: '预留数量' }
+  ],
+  '库存查询'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true

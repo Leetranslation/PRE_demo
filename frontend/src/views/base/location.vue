@@ -17,9 +17,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增库位</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="warehouseId" label="仓库ID" width="100" />
       <el-table-column prop="code" label="库位编号" width="160" />
       <el-table-column prop="name" label="库位名称" min-width="160" />
@@ -69,6 +71,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { locationList, locationCreate, locationUpdate } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -77,6 +80,17 @@ const warehouses = ref<any[]>([])
 const dialogVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, warehouseId: undefined as number | undefined, keyword: '' })
 const form = reactive<any>({})
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'warehouseId', label: '仓库ID' },
+    { prop: 'code', label: '库位编号' },
+    { prop: 'name', label: '库位名称' },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '启用' : '停用') }
+  ],
+  '库位'
+)
+function doExport() { handleExport(records.value) }
 
 async function loadWarehouses() {
   const res = await warehouseList({ page: 1, pageSize: 100 })

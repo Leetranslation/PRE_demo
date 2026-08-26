@@ -12,9 +12,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增 BOM</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="code" label="BOM编号" width="160" />
       <el-table-column prop="name" label="名称" min-width="160" />
       <el-table-column label="状态" width="90">
@@ -139,6 +141,7 @@ import { ElMessage } from 'element-plus'
 import { bomList, bomCreate, bomItems } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -148,6 +151,16 @@ const itemsVisible = ref(false)
 const items = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '' })
 const form = reactive<any>({ items: [] })
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'code', label: 'BOM编号' },
+    { prop: 'name', label: '名称' },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '生效' : '失效') }
+  ],
+  'BOM'
+)
+function doExport() { handleExport(records.value) }
 
 // 选择器
 const materialPickerVisible = ref(false)

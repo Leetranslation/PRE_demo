@@ -19,9 +19,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">新增工单</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="工单号" width="170" />
       <el-table-column prop="productId" label="产品ID" width="90" />
       <el-table-column prop="quantity" label="生产数量" width="110" align="right" />
@@ -182,6 +184,7 @@ import {
 } from '@/api/production'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -204,6 +207,24 @@ const productPickerVisible = ref(false)
 const currentMaterialRow = ref<any>(null)
 const currentProductRow = ref<any>(null)
 const isMainProduct = ref(false)
+
+// 导出
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'orderNo', label: '工单号' },
+    { prop: 'productId', label: '产品ID' },
+    { prop: 'quantity', label: '生产数量' },
+    { prop: 'completedQty', label: '已完成' },
+    { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },
+    { prop: 'bizStatus', label: '业务状态', formatter: (row: any) => bizText(row.bizStatus) },
+    { prop: 'remark', label: '备注' }
+  ],
+  '生产工单'
+)
+
+function doExport() {
+  handleExport(records.value)
+}
 
 function approveText(v: string) { return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v }
 function approveTagType(v: string) { return { pending: 'info', approving: 'warning', approved: 'success' }[v] || 'info' }

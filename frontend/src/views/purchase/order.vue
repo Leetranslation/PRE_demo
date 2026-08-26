@@ -19,9 +19,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增采购单</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="采购单号" width="200" />
       <el-table-column prop="supplierId" label="供应商ID" min-width="120" />
       <el-table-column prop="orderDate" label="订单日期" width="140" />
@@ -154,6 +156,7 @@ import {
 } from '@/api/purchase'
 import { supplierList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -170,6 +173,24 @@ const supplierLoading = ref(false)
 // 物料选择
 const pickerVisible = ref(false)
 const currentItemRow = ref<any>(null)
+
+// 导出
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'orderNo', label: '采购单号' },
+    { prop: 'supplierId', label: '供应商ID' },
+    { prop: 'orderDate', label: '订单日期' },
+    { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },
+    { prop: 'bizStatus', label: '业务状态', formatter: (row: any) => bizText(row.bizStatus) },
+    { prop: 'totalAmount', label: '金额' },
+    { prop: 'remark', label: '备注' }
+  ],
+  '采购订单'
+)
+
+function doExport() {
+  handleExport(records.value)
+}
 
 async function searchSupplier(keyword: string) {
   supplierLoading.value = true

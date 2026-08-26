@@ -20,10 +20,12 @@
     <!-- 顶部操作 -->
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
     <!-- 表格 -->
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="code" label="客户编号" width="160" />
       <el-table-column prop="name" label="客户名称" min-width="180" />
       <el-table-column prop="category" label="分类" width="120" />
@@ -93,6 +95,7 @@
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { customerList, customerCreate, customerUpdate, customerStatus } from '@/api/base'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -100,6 +103,24 @@ const total = ref(0)
 const dialogVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: undefined as number | undefined })
 const form = reactive<any>({})
+
+// 导出
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'code', label: '客户编号' },
+    { prop: 'name', label: '客户名称' },
+    { prop: 'category', label: '分类' },
+    { prop: 'contact', label: '联系人' },
+    { prop: 'phone', label: '电话' },
+    { prop: 'email', label: '邮箱' },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '启用' : '停用') }
+  ],
+  '客户档案'
+)
+
+function doExport() {
+  handleExport(records.value)
+}
 
 async function load() {
   loading.value = true

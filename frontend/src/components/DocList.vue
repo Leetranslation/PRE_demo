@@ -1,6 +1,10 @@
 <template>
   <el-card shadow="never">
-    <el-table :data="records" v-loading="loading" border stripe>
+    <div class="toolbar">
+      <el-button @click="doExport">导出</el-button>
+    </div>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column
         v-for="col in columns"
         :key="col.prop"
@@ -35,14 +39,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { exportExcel, type ExportColumn } from '@/utils/export'
 import type { PageResult } from '@/api/base'
 
 const props = defineProps<{
   columns: Array<{ prop: string; label: string; width?: number; minWidth?: number; align?: string; formatter?: (row: any) => string }>
   fetchList: (params: any) => Promise<PageResult<any>>
   fetchItems: (id: number) => Promise<any[]>
-  itemColumns?: Array<{ prop: string; label: string; width?: number; minWidth?: number; align?: string }>
+  filename?: string
 }>()
 
 const emit = defineEmits<{ (e: 'detail', items: any[]): void }>()
@@ -50,6 +56,7 @@ const emit = defineEmits<{ (e: 'detail', items: any[]): void }>()
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
+const selection = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10 })
 
 async function load() {
@@ -68,9 +75,29 @@ async function viewDetail(row: any) {
   emit('detail', items)
 }
 
+function onSelectionChange(rows: any[]) {
+  selection.value = rows
+}
+
+function doExport() {
+  const data = selection.value.length ? selection.value : records.value
+  if (!data.length) {
+    ElMessage.warning('没有可导出的数据')
+    return
+  }
+  const exportCols: ExportColumn[] = props.columns.map((c) => ({
+    prop: c.prop,
+    label: c.label,
+    formatter: c.formatter
+  }))
+  exportExcel(exportCols, data, props.filename || '导出')
+  ElMessage.success(`已导出 ${data.length} 条数据`)
+}
+
 onMounted(load)
 </script>
 
 <style scoped>
+.toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
 </style>

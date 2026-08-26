@@ -2,9 +2,11 @@
   <el-card shadow="never">
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">新增角色</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="code" label="角色编码" width="150" />
       <el-table-column prop="name" label="角色名称" width="150" />
       <el-table-column label="数据权限" width="120">
@@ -65,6 +67,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { roleList, roleCreate, roleUpdate, rolePermissions, roleAssign, permissionList } from '@/api/system'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -74,6 +77,17 @@ const allPerms = ref<any[]>([])
 const selectedPerms = ref<number[]>([])
 const currentRoleId = ref<number | null>(null)
 const form = reactive<any>({})
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'code', label: '角色编码' },
+    { prop: 'name', label: '角色名称' },
+    { prop: 'dataScope', label: '数据权限', formatter: (row: any) => scopeText(row.dataScope) },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '启用' : '停用') }
+  ],
+  '角色'
+)
+function doExport() { handleExport(records.value) }
 
 function scopeText(v: string) {
   return { all: '全部', dept: '本部门', self: '本人' }[v] || v

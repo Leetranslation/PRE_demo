@@ -1,5 +1,5 @@
 <template>
-  <DocList :columns="columns" :fetch-list="fetchList" :fetch-items="fetchItems" @detail="showDetail" />
+  <DocList :columns="columns" :fetch-list="fetchList" :fetch-items="fetchItems" filename="生产入库单" @detail="showDetail" />
   <el-dialog v-model="detailVisible" title="入库明细" width="720px">
     <el-table :data="detailItems" border size="small">
       <el-table-column prop="productId" label="产品ID" width="110" />

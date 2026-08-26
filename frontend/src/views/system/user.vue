@@ -12,9 +12,11 @@
 
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">新增用户</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="username" label="用户名" width="150" />
       <el-table-column prop="realName" label="姓名" width="120" />
       <el-table-column prop="phone" label="手机号" width="140" />
@@ -80,6 +82,7 @@
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userList, userCreate, userUpdate, userResetPassword, userStatus, userRoles, userAssignRoles, roleList } from '@/api/system'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -91,6 +94,18 @@ const selectedRoles = ref<number[]>([])
 const currentUserId = ref<number | null>(null)
 const query = reactive({ page: 1, pageSize: 10, keyword: '' })
 const form = reactive<any>({})
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'username', label: '用户名' },
+    { prop: 'realName', label: '姓名' },
+    { prop: 'phone', label: '手机号' },
+    { prop: 'email', label: '邮箱' },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '启用' : '停用') }
+  ],
+  '用户'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true

@@ -2,9 +2,11 @@
   <el-card shadow="never">
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">新增部门</el-button>
+      <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe>
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="code" label="部门编码" width="150" />
       <el-table-column prop="name" label="部门名称" width="180" />
       <el-table-column prop="parentId" label="上级部门ID" width="120" />
@@ -42,11 +44,24 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { departmentList, departmentCreate, departmentUpdate } from '@/api/system'
+import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const dialogVisible = ref(false)
 const form = reactive<any>({})
+
+const { selection, onSelectionChange, handleExport } = useExport(
+  [
+    { prop: 'code', label: '部门编码' },
+    { prop: 'name', label: '部门名称' },
+    { prop: 'parentId', label: '上级部门ID' },
+    { prop: 'sort', label: '排序' },
+    { prop: 'status', label: '状态', formatter: (row: any) => (row.status === 1 ? '启用' : '停用') }
+  ],
+  '部门'
+)
+function doExport() { handleExport(records.value) }
 
 async function load() {
   loading.value = true
