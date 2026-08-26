@@ -113,12 +113,25 @@
   <!-- 出库 -->
   <el-dialog v-model="outboundVisible" title="销售出库" width="600px">
     <el-form :model="outboundForm" label-width="90px">
-      <el-form-item label="仓库ID" required><el-input-number v-model="outboundForm.warehouseId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="仓库" required>
+        <el-select v-model="outboundForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
     </el-form>
     <div class="item-toolbar"><span>出库明细</span><el-button size="small" type="primary" @click="addOutboundItem">添加</el-button></div>
     <el-table :data="outboundForm.items" border size="small">
-      <el-table-column label="明细ID" width="110"><template #default="{ row }"><el-input-number v-model="row.orderItemId" :min="1" size="small" style="width:100%" /></template></el-table-column>
-      <el-table-column label="产品ID" width="110"><template #default="{ row }"><el-input-number v-model="row.productId" :min="1" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="产品" min-width="180">
+        <template #default="{ row }">
+          <div class="picker-cell">
+            <span v-if="row.productId" class="picker-name">{{ row.productName }}</span>
+            <span v-else class="picker-empty">未选择产品</span>
+          </div>
+          <el-button link size="small" type="primary" @click="openProductPicker(row)">
+            {{ row.productId ? '更换' : '选择产品' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="数量" width="130"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="outboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -131,8 +144,18 @@
   <!-- 退货 -->
   <el-dialog v-model="returnVisible" title="销售退货" width="480px">
     <el-form :model="returnForm" label-width="90px">
-      <el-form-item label="仓库ID" required><el-input-number v-model="returnForm.warehouseId" :min="1" style="width: 100%" /></el-form-item>
-      <el-form-item label="产品ID" required><el-input-number v-model="returnForm.productId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="仓库" required>
+        <el-select v-model="returnForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="产品" required>
+        <el-input v-model="returnForm.productName" placeholder="点击选择产品" readonly style="width: 100%">
+          <template #append>
+            <el-button @click="openReturnProductPicker">选择</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
       <el-form-item label="退货数量" required><el-input-number v-model="returnForm.quantity" :min="0" :precision="6" style="width: 100%" /></el-form-item>
     </el-form>
     <template #footer>
@@ -165,7 +188,7 @@ import {
   salesOrderList, salesOrderItems, salesOrderCreate, salesOrderSubmit,
   salesOrderApprove, salesOutboundCreate, salesReturnCreate
 } from '@/api/sales'
-import { customerList } from '@/api/base'
+import { customerList, warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
 import { useExport } from '@/composables/useExport'
 
@@ -182,6 +205,10 @@ const customerLoading = ref(false)
 // 产品选择
 const productPickerVisible = ref(false)
 const currentProductRow = ref<any>(null)
+const pickerTarget = ref<'row' | 'return'>('row')
+// 仓库下拉
+const warehouses = ref<any[]>([])
+const warehouseLoading = ref(false)
 // 导出
 const { selection, onSelectionChange, handleExport } = useExport(
   [
@@ -211,16 +238,35 @@ async function searchCustomer(keyword: string) {
 }
 
 function openProductPicker(row: any) {
+  pickerTarget.value = 'row'
   currentProductRow.value = row
   productPickerVisible.value = true
 }
 
+function openReturnProductPicker() {
+  pickerTarget.value = 'return'
+  productPickerVisible.value = true
+}
+
 function onProductSelected(product: any) {
-  if (currentProductRow.value) {
+  if (pickerTarget.value === 'return') {
+    returnForm.productId = product.id
+    returnForm.productName = product.name
+  } else if (currentProductRow.value) {
     currentProductRow.value.productId = product.id
     currentProductRow.value.productName = product.name
     currentProductRow.value.spec = product.spec
     currentProductRow.value.unit = product.unit
+  }
+}
+
+async function searchWarehouse(keyword: string) {
+  warehouseLoading.value = true
+  try {
+    const res = await warehouseList({ page: 1, pageSize: 20, keyword, status: 1 })
+    warehouses.value = res.records
+  } finally {
+    warehouseLoading.value = false
   }
 }
 const outboundVisible = ref(false)
@@ -284,13 +330,17 @@ async function handleApprove(row: any) {
 
 function openOutbound(row: any) {
   outboundForm.orderId = row.id
-  outboundForm.warehouseId = 1
+  outboundForm.warehouseId = undefined
   outboundForm.items = []
+  searchWarehouse('')
   outboundVisible.value = true
 }
-function addOutboundItem() { outboundForm.items.push({ orderItemId: undefined, productId: undefined, quantity: 0 }) }
+function addOutboundItem() { outboundForm.items.push({ orderItemId: undefined, productId: undefined, productName: '', quantity: 0 }) }
 async function handleOutbound() {
   if (!outboundForm.warehouseId || !outboundForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
+  for (const item of outboundForm.items) {
+    if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
+  }
   await salesOutboundCreate(outboundForm)
   ElMessage.success('出库成功')
   outboundVisible.value = false
@@ -299,9 +349,11 @@ async function handleOutbound() {
 
 function openReturn(row: any) {
   returnForm.orderId = row.id
-  returnForm.warehouseId = 1
+  returnForm.warehouseId = undefined
   returnForm.productId = undefined
+  returnForm.productName = ''
   returnForm.quantity = 0
+  searchWarehouse('')
   returnVisible.value = true
 }
 async function handleReturn() {

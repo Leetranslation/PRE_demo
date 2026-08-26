@@ -91,7 +91,11 @@
   <!-- 领料 -->
   <el-dialog v-model="issueVisible" title="生产领料" width="620px">
     <el-form :model="issueForm" label-width="90px">
-      <el-form-item label="仓库ID" required><el-input-number v-model="issueForm.warehouseId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="仓库" required>
+        <el-select v-model="issueForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
     </el-form>
     <div class="item-toolbar"><span>领料明细</span><el-button size="small" type="primary" @click="addIssueItem">添加</el-button></div>
     <el-table :data="issueForm.items" border size="small">
@@ -119,7 +123,11 @@
   <!-- 退料 -->
   <el-dialog v-model="returnVisible" title="生产退料" width="620px">
     <el-form :model="returnForm" label-width="90px">
-      <el-form-item label="仓库ID" required><el-input-number v-model="returnForm.warehouseId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="仓库" required>
+        <el-select v-model="returnForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
     </el-form>
     <div class="item-toolbar"><span>退料明细</span><el-button size="small" type="primary" @click="addReturnItem">添加</el-button></div>
     <el-table :data="returnForm.items" border size="small">
@@ -146,7 +154,11 @@
   <!-- 入库 -->
   <el-dialog v-model="inboundVisible" title="生产入库" width="620px">
     <el-form :model="inboundForm" label-width="90px">
-      <el-form-item label="仓库ID" required><el-input-number v-model="inboundForm.warehouseId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="仓库" required>
+        <el-select v-model="inboundForm.warehouseId" filterable remote :remote-method="searchWarehouse" :loading="warehouseLoading" placeholder="搜索仓库" clearable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
     </el-form>
     <div class="item-toolbar"><span>入库明细</span><el-button size="small" type="primary" @click="addInboundItem">添加</el-button></div>
     <el-table :data="inboundForm.items" border size="small">
@@ -185,6 +197,7 @@ import {
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
 import { useExport } from '@/composables/useExport'
+import { warehouseList } from '@/api/base'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -207,6 +220,20 @@ const productPickerVisible = ref(false)
 const currentMaterialRow = ref<any>(null)
 const currentProductRow = ref<any>(null)
 const isMainProduct = ref(false)
+
+// 仓库下拉
+const warehouses = ref<any[]>([])
+const warehouseLoading = ref(false)
+
+async function searchWarehouse(keyword: string) {
+  warehouseLoading.value = true
+  try {
+    const res = await warehouseList({ page: 1, pageSize: 20, keyword, status: 1 })
+    warehouses.value = res.records
+  } finally {
+    warehouseLoading.value = false
+  }
+}
 
 // 导出
 const { selection, onSelectionChange, handleExport } = useExport(
@@ -305,8 +332,9 @@ async function handleApprove(row: any) {
 
 function openIssue(row: any) {
   issueForm.orderId = row.id
-  issueForm.warehouseId = 1
+  issueForm.warehouseId = undefined
   issueForm.items = []
+  searchWarehouse('')
   issueVisible.value = true
 }
 function addIssueItem() { issueForm.items.push({ materialId: undefined, materialName: '', quantity: 0, batchNo: '' }) }
@@ -323,8 +351,9 @@ async function handleIssue() {
 
 function openReturn(row: any) {
   returnForm.orderId = row.id
-  returnForm.warehouseId = 1
+  returnForm.warehouseId = undefined
   returnForm.items = []
+  searchWarehouse('')
   returnVisible.value = true
 }
 function addReturnItem() { returnForm.items.push({ materialId: undefined, materialName: '', quantity: 0 }) }
@@ -341,8 +370,9 @@ async function handleReturn() {
 
 function openInbound(row: any) {
   inboundForm.orderId = row.id
-  inboundForm.warehouseId = 1
+  inboundForm.warehouseId = undefined
   inboundForm.items = []
+  searchWarehouse('')
   inboundVisible.value = true
 }
 function addInboundItem() { inboundForm.items.push({ productId: undefined, productName: '', quantity: 0 }) }
