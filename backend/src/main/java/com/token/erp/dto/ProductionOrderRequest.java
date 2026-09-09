@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @Data
 public class ProductionOrderRequest {
     private Long id;
+    private String orderType;
     private Long productId;
     private BigDecimal quantity;
     private String productionType;

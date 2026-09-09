@@ -20,6 +20,12 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="操作" width="150" fixed="right">
+        <template #default="{ row }">
+          <el-button v-if="row.itemType === 'material'" link type="primary" @click="genPurchase(row)">生成采购申请</el-button>
+          <el-button v-else link type="warning" @click="genWorkOrder(row)">生成生产工单</el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </el-card>
 </template>
@@ -27,7 +33,8 @@
 <script setup lang="ts">
 defineOptions({ name: 'InventoryWarning' })
 import { ref } from 'vue'
-import { inventoryWarning } from '@/api/inventory'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { inventoryWarning, warningGeneratePurchase, warningGenerateWorkOrder } from '@/api/inventory'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -39,6 +46,20 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+async function genPurchase(row: any) {
+  await ElMessageBox.confirm(`确认为「${row.name}」生成补货采购申请单吗？`, '提示', { type: 'warning' })
+  const res: any = await warningGeneratePurchase(row.itemId)
+  ElMessage.success(`已生成采购申请单：${res.requisitionNo}`)
+  load()
+}
+
+async function genWorkOrder(row: any) {
+  await ElMessageBox.confirm(`确认为「${row.name}」生成补货生产工单吗？`, '提示', { type: 'warning' })
+  const res: any = await warningGenerateWorkOrder(row.itemId)
+  ElMessage.success(`已生成生产工单：${res.orderNo}`)
+  load()
 }
 
 load()

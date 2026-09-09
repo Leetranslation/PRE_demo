@@ -4,10 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.token.erp.common.BizException;
 import com.token.erp.dto.PurchaseInquiryRequest;
+import com.token.erp.dto.PurchaseOrderRequest;
 import com.token.erp.entity.PurchaseInquiry;
 import com.token.erp.entity.PurchaseInquiryItem;
+import com.token.erp.entity.PurchaseOrder;
+import com.token.erp.entity.PurchaseOrderItem;
 import com.token.erp.mapper.PurchaseInquiryItemMapper;
 import com.token.erp.mapper.PurchaseInquiryMapper;
+import com.token.erp.mapper.PurchaseOrderMapper;
 import com.token.erp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +20,10 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +34,8 @@ public class PurchaseInquiryService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final PurchaseOrderService purchaseOrderService;
+    private final PurchaseOrderMapper purchaseOrderMapper;
 
     public Page<PurchaseInquiry> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<PurchaseInquiry> qw = new LambdaQueryWrapper<>();
@@ -112,5 +121,73 @@ public class PurchaseInquiryService {
                 throw new BizException("禁止自审：不能审批自己提交的单据");
             }
         }
+    }
+
+    /**
+     * 比价生单：将已审批询价单转采购订单
+     * @param inquiryId  询价单ID
+     * @param supplierId 指定供应商（可空；为空时自动按供应商总价最低比价选择）
+     */
+    @Transactional
+    public PurchaseOrder toPurchaseOrder(Long inquiryId, Long supplierId) {
+        PurchaseInquiry inquiry = inquiryMapper.selectById(inquiryId);
+        if (inquiry == null) throw new BizException(404, "询价单不存在");
+        if (!"approved".equals(inquiry.getApproveStatus())) throw new BizException("仅已审批的询价单可生单");
+        if (!"pending".equals(inquiry.getBizStatus())) throw new BizException("该询价单已比价生单");
+
+        List<PurchaseInquiryItem> allItems = items(inquiryId);
+        if (allItems.isEmpty()) throw new BizException("询价单无明细");
+
+        Long targetSupplier = supplierId;
+        if (targetSupplier == null) {
+            targetSupplier = bestSupplier(allItems);
+        }
+        if (targetSupplier == null) throw new BizException("无可生单的供应商报价");
+
+        List<PurchaseInquiryItem> selected = new ArrayList<>();
+        for (PurchaseInquiryItem i : allItems) {
+            if (targetSupplier.equals(i.getSupplierId())) selected.add(i);
+        }
+        if (selected.isEmpty()) throw new BizException("该询价单无该供应商的报价明细");
+
+        PurchaseOrderRequest req = new PurchaseOrderRequest();
+        req.setSupplierId(targetSupplier);
+        req.setOrderDate(LocalDate.now());
+        List<PurchaseOrderItem> orderItems = new ArrayList<>();
+        for (PurchaseInquiryItem si : selected) {
+            PurchaseOrderItem oi = new PurchaseOrderItem();
+            oi.setMaterialId(si.getMaterialId());
+            oi.setSpec(si.getSpec());
+            oi.setUnit(si.getUnit());
+            oi.setQuantity(si.getQuantity());
+            oi.setPrice(si.getPrice());
+            oi.setRemark(si.getRemark());
+            orderItems.add(oi);
+        }
+        req.setItems(orderItems);
+
+        PurchaseOrder order = purchaseOrderService.create(req);
+        order.setSourceType("inquiry");
+        order.setSourceId(inquiryId);
+        purchaseOrderMapper.updateById(order);
+
+        inquiry.setBizStatus("priced");
+        inquiryMapper.updateById(inquiry);
+        return order;
+    }
+
+    /** 自动比价：按供应商归集总价，选总价最低的供应商 */
+    private Long bestSupplier(List<PurchaseInquiryItem> items) {
+        Map<Long, BigDecimal> totals = new HashMap<>();
+        for (PurchaseInquiryItem i : items) {
+            if (i.getSupplierId() == null || i.getPrice() == null) continue;
+            BigDecimal qty = i.getQuantity() == null ? BigDecimal.ZERO : i.getQuantity();
+            BigDecimal line = i.getPrice().multiply(qty);
+            totals.merge(i.getSupplierId(), line, BigDecimal::add);
+        }
+        return totals.entrySet().stream()
+                .min(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 }

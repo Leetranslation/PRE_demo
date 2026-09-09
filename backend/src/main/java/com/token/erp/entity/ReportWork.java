@@ -38,6 +38,10 @@ public class ReportWork extends BaseEntity {
     private BigDecimal qualifiedQty;
     @Schema(description = "不良品数量")
     private BigDecimal defectiveQty;
+    @Schema(description = "不良品项ID")
+    private Long defectItemId;
+    @Schema(description = "不良原因")
+    private String defectReason;
     @Schema(description = "工时（小时）")
     private BigDecimal workHours;
     @Schema(description = "工序开始时间")

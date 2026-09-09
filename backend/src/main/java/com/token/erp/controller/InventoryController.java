@@ -4,7 +4,10 @@ import com.token.erp.common.PageResult;
 import com.token.erp.common.Result;
 import com.token.erp.entity.Inventory;
 import com.token.erp.entity.InventoryTransaction;
+import com.token.erp.entity.ProductionOrder;
+import com.token.erp.entity.PurchaseRequisition;
 import com.token.erp.service.InventoryService;
+import com.token.erp.service.WarningActionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final WarningActionService warningActionService;
 
     @GetMapping("/list")
     public Result<PageResult<Inventory>> list(
@@ -43,6 +47,18 @@ public class InventoryController {
     @GetMapping("/warning")
     public Result<java.util.List<com.token.erp.dto.InventoryWarningVO>> warning() {
         return Result.success(inventoryService.warningList());
+    }
+
+    @PostMapping("/warning/generatePurchase")
+    @PreAuthorize("hasAuthority('inventory:reserve')")
+    public Result<PurchaseRequisition> generatePurchase(@RequestParam Long itemId) {
+        return Result.success(warningActionService.generatePurchase(itemId));
+    }
+
+    @PostMapping("/warning/generateWorkOrder")
+    @PreAuthorize("hasAuthority('inventory:reserve')")
+    public Result<ProductionOrder> generateWorkOrder(@RequestParam Long itemId) {
+        return Result.success(warningActionService.generateWorkOrder(itemId));
     }
 
     @GetMapping("/batchTrack")

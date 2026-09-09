@@ -418,3 +418,95 @@ public class ProcessController {
 | GET | `/api/quality/apply/list` | 分页查询质检申请单 | quality |
 | POST | `/api/quality/apply/create` | 新增质检申请单 | quality:create |
 | POST | `/api/quality/apply/generate` | 申请单生成检验单（转待检） | quality:create |
+
+### 第一档断环补全：库存盘点（StocktakeController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/inventory/stocktake/list` | 分页查询盘点单 | inventory:stocktake |
+| GET | `/api/inventory/stocktake/items` | 查询盘点明细 | inventory:stocktake |
+| POST | `/api/inventory/stocktake/create` | 创建盘点方案（自动带库存账面） | inventory:stocktake:create |
+| POST | `/api/inventory/stocktake/count` | 录入实际数（算差异） | inventory:stocktake:create |
+| POST | `/api/inventory/stocktake/adjust` | 差异生成调整（盘盈入库/盘亏出库） | inventory:stocktake:create |
+
+### 第一档断环补全：库存调拨（TransferController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/inventory/transfer/list` | 分页查询调拨单 | inventory:transfer |
+| GET | `/api/inventory/transfer/items` | 查询调拨明细 | inventory:transfer |
+| POST | `/api/inventory/transfer/create` | 新增调拨（源出+目标入） | inventory:transfer:create |
+
+### 第一档断环补全：组装/拆卸（AssemblyController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/inventory/assembly/list` | 分页查询组装/拆卸单 | inventory:assembly |
+| GET | `/api/inventory/assembly/items` | 查询子件明细 | inventory:assembly |
+| POST | `/api/inventory/assembly/create` | 新增组装/拆卸（按BOM展开子件） | inventory:assembly:create |
+
+### 第一档断环补全：期初余额（BeginBalanceController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/inventory/beginBalance/list` | 分页查询期初余额 | inventory:beginBalance |
+| POST | `/api/inventory/beginBalance/save` | 保存期初余额（upsert） | inventory:beginBalance:create |
+| POST | `/api/inventory/beginBalance/delete` | 删除期初余额 | inventory:beginBalance:create |
+
+### 第一档断环补全：物料替代料（MaterialSubstituteController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/base/substitute/list` | 分页查询替代料关系 | base:substitute |
+| POST | `/api/base/substitute/create` | 新增替代料 | base:substitute:create |
+| POST | `/api/base/substitute/update` | 编辑替代料 | base:substitute:create |
+| POST | `/api/base/substitute/status` | 启用/停用 | base:substitute:create |
+| POST | `/api/base/substitute/delete` | 删除替代料 | base:substitute:create |
+
+### 第一档断环补全：不良品项（DefectItemController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/base/defect/list` | 分页查询不良品项 | base:defect |
+| POST | `/api/base/defect/create` | 新增不良品项 | base:defect:create |
+| POST | `/api/base/defect/update` | 编辑不良品项 | base:defect:create |
+| POST | `/api/base/defect/status` | 启用/停用 | base:defect:create |
+| POST | `/api/base/defect/delete` | 删除不良品项 | base:defect:create |
+
+### 第一档断环补全：客户价格资料（CustomerPriceController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/base/customerPrice/list` | 分页查询客户价格 | base:customerPrice |
+| POST | `/api/base/customerPrice/create` | 新增客户价格 | base:customerPrice:create |
+| POST | `/api/base/customerPrice/update` | 编辑客户价格 | base:customerPrice:create |
+| POST | `/api/base/customerPrice/status` | 启用/停用 | base:customerPrice:create |
+| POST | `/api/base/customerPrice/delete` | 删除客户价格 | base:customerPrice:create |
+
+### 第一档断环补全：齐套分析（CompleteAnalysisController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/production/completeAnalysis/analysis` | 工单 BOM 需求 vs 可用库存，返回缺料清单 | production:completeAnalysis |
+
+### 第一档断环补全：检验方法/方案（QualityBaseController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/quality/base/method/list` | 分页查询检验方法 | quality:base |
+| POST | `/api/quality/base/method/create` | 新增检验方法 | quality:base:create |
+| POST | `/api/quality/base/method/update` | 编辑检验方法 | quality:base:create |
+| POST | `/api/quality/base/method/status` | 启用/停用 | quality:base:create |
+| GET | `/api/quality/base/scheme/list` | 分页查询检验方案 | quality:base |
+| POST | `/api/quality/base/scheme/create` | 新增检验方案 | quality:base:create |
+| POST | `/api/quality/base/scheme/update` | 编辑检验方案 | quality:base:create |
+| POST | `/api/quality/base/scheme/status` | 启用/停用 | quality:base:create |
+
+### 第一档断环补全：已有 Controller 扩展
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| POST | `/api/purchase/inquiry/toPurchaseOrder` | 比价生单（询价转采购订单） | purchase:inquiry:create |
+| POST | `/api/inventory/warning/generatePurchase` | 物料预警生成采购申请单 | inventory:reserve |
+| POST | `/api/inventory/warning/generateWorkOrder` | 产品预警生成生产工单 | inventory:reserve |
+| GET | `/api/production/order/list?orderType=semi` | 半成品加工单（复用生产工单） | production:semi |

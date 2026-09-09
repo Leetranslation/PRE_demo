@@ -57,6 +57,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'BOM 管理' }
       },
       {
+        path: 'base/substitute',
+        name: 'MaterialSubstitute',
+        component: () => import('@/views/base/substitute.vue'),
+        meta: { title: '替代料关系' }
+      },
+      {
+        path: 'base/customerPrice',
+        name: 'CustomerPrice',
+        component: () => import('@/views/base/customerPrice.vue'),
+        meta: { title: '客户价格资料' }
+      },
+      {
         path: 'base/location',
         name: 'Location',
         component: () => import('@/views/base/location.vue'),
@@ -111,6 +123,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '序列号规则' }
       },
       {
+        path: 'produceData/defect',
+        name: 'DefectItem',
+        component: () => import('@/views/base/defect.vue'),
+        meta: { title: '不良品项' }
+      },
+      {
         path: 'base/area',
         name: 'Area',
         component: () => import('@/views/base/area.vue'),
@@ -152,6 +170,30 @@ const routes: RouteRecordRaw[] = [
         name: 'OtherStock',
         component: () => import('@/views/inventory/otherStock.vue'),
         meta: { title: '其他出入库' }
+      },
+      {
+        path: 'inventory/stocktake',
+        name: 'Stocktake',
+        component: () => import('@/views/inventory/stocktake.vue'),
+        meta: { title: '库存盘点' }
+      },
+      {
+        path: 'inventory/transfer',
+        name: 'Transfer',
+        component: () => import('@/views/inventory/transfer.vue'),
+        meta: { title: '库存调拨' }
+      },
+      {
+        path: 'inventory/assembly',
+        name: 'Assembly',
+        component: () => import('@/views/inventory/assembly.vue'),
+        meta: { title: '组装/拆卸' }
+      },
+      {
+        path: 'inventory/beginBalance',
+        name: 'BeginBalance',
+        component: () => import('@/views/inventory/beginBalance.vue'),
+        meta: { title: '期初余额' }
       },
       // ===== MRP =====
       {
@@ -331,6 +373,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/production/mps.vue'),
         meta: { title: '主生产计划' }
       },
+      {
+        path: 'production/completeAnalysis',
+        name: 'CompleteAnalysis',
+        component: () => import('@/views/production/completeAnalysis.vue'),
+        meta: { title: '齐套分析' }
+      },
+      {
+        path: 'production/semi',
+        name: 'SemiFinished',
+        component: () => import('@/views/production/semiFinished.vue'),
+        meta: { title: '半成品加工单' }
+      },
       // ===== 质量 =====
       {
         path: 'quality/index',
@@ -343,6 +397,12 @@ const routes: RouteRecordRaw[] = [
         name: 'QcApply',
         component: () => import('@/views/quality/apply.vue'),
         meta: { title: '质检申请单' }
+      },
+      {
+        path: 'quality/base',
+        name: 'QualityBase',
+        component: () => import('@/views/quality/base.vue'),
+        meta: { title: '检验方法/方案' }
       },
       // ===== 系统管理 =====
       {

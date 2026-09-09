@@ -35,6 +35,9 @@
       <el-table-column prop="quantity" label="报工数量" width="100" align="right" />
       <el-table-column prop="qualifiedQty" label="良品" width="80" align="right" />
       <el-table-column prop="defectiveQty" label="不良品" width="80" align="right" />
+      <el-table-column label="不良品项" width="120">
+        <template #default="{ row }">{{ defectName(row.defectItemId) }}</template>
+      </el-table-column>
       <el-table-column prop="workHours" label="工时" width="80" align="right" />
       <el-table-column prop="reporterName" label="报工人" width="100" />
       <el-table-column label="审工状态" width="90">
@@ -78,6 +81,12 @@
       <el-form-item label="报工数量" required><el-input v-model="form.quantity" type="number" /></el-form-item>
       <el-form-item label="良品数量"><el-input v-model="form.qualifiedQty" type="number" /></el-form-item>
       <el-form-item label="不良品数量"><el-input v-model="form.defectiveQty" type="number" /></el-form-item>
+      <el-form-item label="不良品项">
+        <el-select v-model="form.defectItemId" placeholder="选择不良品项" clearable filterable style="width: 100%">
+          <el-option v-for="d in defects" :key="d.id" :label="d.name" :value="d.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="不良原因"><el-input v-model="form.defectReason" /></el-form-item>
       <el-form-item label="工时(小时)"><el-input v-model="form.workHours" type="number" /></el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
     </el-form>
@@ -93,7 +102,7 @@ defineOptions({ name: 'ReportWork' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { reportWorkList, reportWorkCreate, reportWorkApprove, reportWorkUnapprove, reportWorkReject, reportWorkBatchApprove, productionOrderList } from '@/api/production'
-import { processRouteItems, processList } from '@/api/base'
+import { processRouteItems, processList, defectList } from '@/api/base'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -102,6 +111,7 @@ const dialogVisible = ref(false)
 const orders = ref<any[]>([])
 const processes = ref<any[]>([])
 const allProcesses = ref<any[]>([])
+const defects = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, workOrderId: undefined as number | undefined, auditStatus: undefined as string | undefined })
 const form = reactive<any>({})
 
@@ -117,6 +127,14 @@ function processName(id?: number) {
 async function loadAllProcesses() {
   const res = await processList({ page: 1, pageSize: 200 })
   allProcesses.value = res.records
+}
+function defectName(id?: number) {
+  const d = defects.value.find((x) => x.id === id)
+  return d ? d.name : ''
+}
+async function loadDefects() {
+  const res = await defectList({ page: 1, pageSize: 200, status: 1 })
+  defects.value = res.records
 }
 function auditText(v: string) { return { pending: '待审', approved: '已审', rejected: '驳回' }[v] || v }
 function auditTagType(v: string) { return { pending: 'warning', approved: 'success', rejected: 'danger' }[v] || 'info' }
@@ -197,6 +215,7 @@ async function handleBatchApprove() {
 
 loadOrders()
 loadAllProcesses()
+loadDefects()
 load()
 </script>
 

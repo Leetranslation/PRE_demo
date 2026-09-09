@@ -70,6 +70,12 @@ public class ReportWorkService {
             throw new BizException("工单未开始（未执行中），不能报工");
         }
 
+        BigDecimal defective = req.getDefectiveQty() != null ? req.getDefectiveQty() : BigDecimal.ZERO;
+        // 关联校验：有不良品时必须指定不良品项
+        if (defective.compareTo(BigDecimal.ZERO) > 0 && req.getDefectItemId() == null) {
+            throw new BizException("有不良品时必须选择不良品项");
+        }
+
         ReportWork rw = new ReportWork();
         rw.setReportNo(codeGenerator.next("BW"));
         rw.setWorkOrderId(req.getWorkOrderId());
@@ -82,7 +88,9 @@ public class ReportWorkService {
         rw.setReportDate(LocalDateTime.now());
         rw.setQuantity(req.getQuantity());
         rw.setQualifiedQty(req.getQualifiedQty() != null ? req.getQualifiedQty() : req.getQuantity());
-        rw.setDefectiveQty(req.getDefectiveQty() != null ? req.getDefectiveQty() : BigDecimal.ZERO);
+        rw.setDefectiveQty(defective);
+        rw.setDefectItemId(req.getDefectItemId());
+        rw.setDefectReason(req.getDefectReason());
         rw.setWorkHours(req.getWorkHours());
         rw.setStartTime(req.getStartTime());
         rw.setEndTime(req.getEndTime());

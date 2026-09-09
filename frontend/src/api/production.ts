@@ -61,6 +61,11 @@ export function schedulePlanStatus(id: number, status: string) {
   return request.post('/production/schedule/status', null, { params: { id, status } })
 }
 
+// 齐套分析
+export function completeAnalysis(workOrderId: number) {
+  return request.get('/production/completeAnalysis/analysis', { params: { workOrderId } }) as Promise<any[]>
+}
+
 // 主生产计划
 export function mpsPlanList(params: any) {
   return request.get('/production/mps/list', { params }) as Promise<PageResult<any>>

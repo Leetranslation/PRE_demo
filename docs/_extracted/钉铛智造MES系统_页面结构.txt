@@ -1,0 +1,789 @@
+钉铛智造 MES/ERP 系统页面结构与功能说明文档
+测试环境：test3-workorder.daxiongplus.com账号：100004 / lxm111　　编制日期：2026-09-01
+一、系统概述
+钉铛智造是一套面向离散制造企业的一体化 MES + ERP 系统，覆盖“销售—采购—生产—委外—库存—质量—财务—人事—设备—项目”全业务链条，采用 B/S 架构、Vue 单页应用（SPA）+ 多页签工作区模式。系统左侧为一级业务导航，主区域以列表、单据表单、详情、看板/报表四类页面承载业务，支持多窗口并行操作。
+本次共梳理一级菜单 21 项（其中 14 个为带子菜单的业务模块、7 个为直达页面/入口），二级功能页面约 300 个。下文先说明整体界面框架与通用页面模式，再逐模块给出页面清单（含路由、主要操作、表格规模），最后对生产工单等重点模块做功能布局详述。
+二、整体界面布局与交互机制
+2.1 页面框架（四区结构）
+区域 | 位置 | 内容与作用
+① 顶部栏 | 页面最上方 | 企业 Logo/名称、全局菜单搜索框（“请输入菜单名称”可快速定位功能）、行业必读、新手引导、企业ID与当前用户（测试员工）。
+② 左侧导航 | 页面左侧 | 21 个一级菜单；点击直达页面或悬停展开“分组—功能页”二级浮层。
+③ 页签栏 | 导航下方 | 已打开页面以页签形式保留，可多窗口并行切换；固定页签为“系统架构/驾驶舱”，普通页签可单独关闭。
+④ 主内容区 | 右侧主体 | 承载列表、表单、详情、看板、报表等具体业务页面。
+【重要机制】多页签上限为 20 个：当打开页面超过 20 个时，系统弹出“窗口数量不能超过20个，请关掉部分再打开”，并阻止打开新页面，需关闭部分页签后再操作。
+2.2 五类通用页面模式
+页面模式 | 典型特征 | 代表页面
+列表查询页 | 顶部状态页签(可选)+筛选区（可“展开/收起”更多条件，含近3/7/15/30/60天快捷）+操作工具栏+数据表格（支持“列表字段”自定义显隐与列宽）+合计行+分页器 | 生产工单、销售订单、物料库存等绝大多数业务单据/档案
+单据新增/编辑页 | 顶部“取消/保存/提交”，主体为多个折叠分区（基础/收货/财务等）+明细子表（产品列表/物料列表），支持选择产品、历史价格、附件上传 | 新增生产工单、新增销售订单
+详情页 | 顶部业务操作按钮+基础资料只读区+明细/物料BOM+多个业务记录Tab（报工记录/关联单据/工序信息/操作记录等） | 生产工单详情
+左树右表档案页 | 左侧分类树（支持新增/导入分类）+右侧档案列表（固定列+横向滚动列） | 物料档案、产品管理、供应商、设备/工模具
+看板/报表页 | KPI 指标卡+ECharts 图表（趋势/排行/占比），或多维度筛选+导出报表；车间报工为全屏无菜单模式 | 驾驶舱、各类看板、生产/销售/财务报表、简易报工
+2.3 单据通用生命周期
+业务单据普遍遵循统一状态流转：新增/草稿 → 提交 → 审核（可反审核回退）→ 执行/入库/完工 → 完成；异常可作废、删除、撤回。工具栏与行内操作随单据状态动态启用/禁用（未勾选记录时，批量类按钮置灰）。多数单据支持导入、导出、打印（含批量打印/合并打印）、附件、审批流程与审批记录查看。
+三、一级功能导航总览
+一级入口 | 说明 / 所辖页面数
+首页 | 系统架构一览图（业务全流程导览）
+驾驶舱 | 经营数据驾驶舱（顶部页签直达）
+客户池 | 公海客户池（与销售管理-客户池公海同源）
+客户列表 | 私海客户跟进列表
+客户关怀 | 客户关怀/回访提醒
+沟通管理 | 内部沟通/消息
+询价留言 | 官网询价留言处理
+用户绑定 | 系统用户绑定管理
+CRM插件配置 | CRM对接插件参数配置（表单页）
+14 大业务模块 | 销售管理(39)、采购管理(28)、生产管理(41)、库存管理(55)、质量管理(37)、外协管理(28)、物料管理(9)、财务管理(70)、项目管理(5)、数据报表(29)、人事办公(35)、设备管理(4)、基础数据(35)
+四、各业务模块页面结构与功能清单
+说明：“主要操作”已省略搜索、重置、导出、列表字段等通用按钮；“规模”中“N列”为该列表表格字段数，Tab 为页面内状态/分类页签，路由为前端 hash 路径。
+4.1 销售管理（39个页面）
+▸ 客户管理
+功能页面 | 路由 | 主要操作 | 规模
+客户池(公海) | /sale/customerList | 新增、删除、更新、禁用、启用、分配 | 27列
+客户商品对应表 | /sale/customerProductCorrespond | 新增、删除、编辑、详情、禁用、启用 | 表单/看板
+客户线索 | /sale/customerLead | 新增、分配、删除、编辑、详情 | 表单/看板
+客户跟进表(私海) | /sale/customerPool | 添加客户、客户详情、回访提醒、添加进度、修改、放弃、完成 | 17列
+客户关怀 | /rootMenus/sale/customerCare/index | 客户详情、提醒事项、放弃、完成 | 15列
+客户选项配置 | /metadata/customerOption | 新增分类、新增、删除、编辑 | 6列；Tab：客户分类、跟进程度、客户来源、客户行业、客户标签
+▸ 销售单据
+功能页面 | 路由 | 主要操作 | 规模
+报价单管理 | /sale/quotationSheet | 新增、生成单据、提交、编辑、复制、反审核、详情 | 表单/看板
+合同管理 | /sale/contractManagement | 新增、生成设计单、生成销售单、提交、编辑、删除、查看审批流程、反完成、详情、查看审批记录、反审核、洽谈进展 | 表单/看板
+销售订单 | /sale/saleOrder | 新增、提交、审核、反审核、删除、生成送货单、生成设计单、出库、合并打印、生成发票、修改单据信息 | 49列
+销售送货单 | /sale/deliverGoods | 新增、提交、审核、反审核、删除、合并打印 | 表单/看板
+销售发票 | /sale/invoiceManagement | 新增、提交、审核、反审核、删除、核销、详情、查看审批记录、编辑 | 表单/看板
+销售核销 | /sale/salesVerification | 新增、审核、反审核、提交、删除、编辑、详情、查看审批流程 | 14列
+装箱单 | /sale/packingManagement | 新增、审核、反审核、提交、删除、打印箱唛、打印装箱单、查看审批记录、复制、详情、查看审批流程、编辑 | 表单/看板
+销售退货单 | /sale/salesReturn | 新增 | 表单/看板
+售后管理 | /sale/afterSalesManagement | 新增售后单、详情、反审核、审核、提交、编辑、分配、添加进度、完结工单、删除、查看审批记录 | 15列
+设计中心 | /sale/designCenter | 新增、生成标准BOM、编辑、提交、删除、查看审批流程、详情、反审核、设计完成、设计 | 19列
+销售备货单 | /sale/salesStocking | 新增、提交、审核、反审核、删除、编辑、详情、查看审批流程、查看审批记录 | 17列
+销售出库 | /sale/finishedProductOutbound | 新增、提交、审核、反审核、合并打印、删除、批量出库 | 表单/看板
+销售退货出库单 | /sale/salesReturnOutStock | 新增、批量操作 | 表单/看板
+▸ 销售报表
+功能页面 | 路由 | 主要操作 | 规模
+销售订单明细表 | /salesPlatform/saleOrderDetails |  | 44列
+销售出库单明细表 | /salesPlatform/salesOutboundDetails |  | 61列
+销售退货明细表 | /salesPlatform/salesReturnsDetails |  | 30列
+存货销售汇总表 | /salesPlatform/inventorySalesSummary |  | 21列
+客户销售汇总表 | /salesPlatform/customerSalesSummary |  | 18列
+职员销售汇总表 | /salesPlatform/employeeSalesSummary |  | 18列
+部门销售汇总表 | /salesPlatform/departmentSalesSummary |  | 18列
+仓库销售汇总表 | /salesPlatform/warehouseSalesSummary |  | 15列
+职员业务统计表 | /salesPlatform/employeePerformanceStatistics |  | 9列
+客户销售趋势表 | /salesPlatform/customerSalesTrendChart |  | 8列
+销售报表 | — |  | 
+存货销售排行 | /salesPlatform/inventorySalesRanking |  | 9列
+销售订单毛利表 | /salesPlatform/salesOrderGrossProfit |  | 8列
+销售出库毛利表 | /salesPlatform/salesOutboundGrossProfit |  | 9列
+销售未交数量表 | /salesPlatform/salesOutstandingQuantity |  | 9列
+单品分析 | /salesPlatform/singleProductAnalysis |  | 14列
+存货价格分析表 | /salesPlatform/inventoryPriceAnalysis |  | 10列
+客户价格分析表 | /salesPlatform/customerPriceAnalysis |  | 10列
+单据开票情况查询 | /salesPlatform/queryOfDocumentInvoicingStatus |  | 11列
+销售开票回款分析 | /salesPlatform/salesInvoicingAndPaymentAnalysis |  | 11列
+4.2 采购管理（28个页面）
+▸ 采购单据
+功能页面 | 路由 | 主要操作 | 规模
+采购询价单 | /outsource/InquiryForm | 新增、提交、审核、反审核、删除 | 25列
+采购申请单 | /outsource/purchaseRequisitions | 新增、提交、审核、反审核、删除、启用、采购、详情 | 表单/看板
+采购订单 | /outsource/materialPurchaseOrder | 新增、提交、作废、删除、生成发票、批量打印二维码、审核、反审核、合并打印、批量打印 | 表单/看板
+采购退货入库单 | /outsource/purchasingMaterialReturnInStock | 新增、批量操作、反审核、详情 | 表单/看板
+采购退货单 | /outsource/purchasingMaterialReturn | 新增、删除、反审核、详情、编辑、提交、入库 | 表单/看板
+采购发票 | /outsource/purchaseInvoice | 新增、审核、反审核、提交、删除、核销、详情、查看审批记录、编辑 | 表单/看板
+采购核销 | /outsource/writeOff | 新增、提交、审核、反审核、删除、编辑、详情、查看审批流程、查看审批记录 | 表单/看板
+▸ 采购工具
+功能页面 | 路由 | 主要操作 | 规模
+MRP计划 | /outsource/MRPplan | 新增、作废、删除、编辑、详情 | 表单/看板
+销售补货 | /outsource/IntelligentProcurement | 选择时间范围、参数配置、生成采购单 | 19列
+齐套分析 | /outsource/completeAnalysis | 选择产品、选择半成品、计算、计算参数规则、生成单据 | 11列
+比价生单 | /outsource/priceParityBirthSingle | 选择采购申请单、选择销售单、选择产品、选择物料、比价、生成采购单、删除、选择询价单 | 25列
+物料替代清单 | /outsource/materialSubstituteRecord |  | 19列
+▸ 采购报表
+功能页面 | 路由 | 主要操作 | 规模
+采购申请明细 | /purchasingManagement/purchasingRequisition |  | 表单/看板
+采购单明细表 | /purchasingManagement/purchaseOrderDetails |  | 表单/看板
+采购入库单汇总表 | /purchasingManagement/purchaseReceiptSummary |  | 表单/看板
+采购单执行追踪表 | /purchasingManagement/purchaseOrderExecutionTracking |  | 表单/看板
+采购业务汇总表 | /purchasingManagement/procurementBusinessSummary |  | 表单/看板
+入库存货汇总表 | /purchasingManagement/incomingInventorySummary | 查看明细 | 表单/看板
+入库存货明细表 | /purchasingManagement/incomingInventoryDetails |  | 表单/看板
+逾期未交付明细表 | /purchasingManagement/overdueUndeliveredDetails |  | 表单/看板
+退货分析报表 | /purchasingManagement/returnAnalysis |  | 表单/看板
+供应商及时率分析 | /purchasingManagement/supplierTimelinessAnalysis |  | 表单/看板
+采购单及时率分析 | /purchasingManagement/purchaseOrdersTimelinessAnalysis |  | 表单/看板
+预计供应量查询 | /purchasingManagement/expectedSupplyInquiry |  | 表单/看板
+采购价格分析 | /purchasingManagement/purchasePriceAnalysis |  | 表单/看板
+供应商存货价格表 | /purchasingManagement/supplierInventoryPrice |  | 表单/看板
+物料年度采购价格分析表 | /purchasingManagement/materialYearlyPurchasePriceAnalysis |  | 表单/看板
+供应商年度采购单价对比 | /purchasingManagement/supplierYearlyPurchasePriceComparison |  | 表单/看板
+4.3 生产管理（41个页面）
+▸ 生产单据
+功能页面 | 路由 | 主要操作 | 规模
+生产排产计划 | /productionScheduling/list | 排产 | 表单/看板
+已排产列表 | /scheduled/list |  | 表单/看板
+主生产计划 | /production/masterProductionPlan | 生成工单 | 表单/看板
+生产工单 | /production/workOrder | 新增工单、批量打印工艺流转卡、合并打印工艺流转卡、批量领料、开始、删除、结束、完工、开启、查看进度 | 33列；Tab：全部工单、未开始、执行中、快逾期、已逾期、已完成、已作废
+半成品加工单 | /production/semiFinishedProducts | 新增半成品工单、批量打印工艺流转卡、合并打印工艺流转卡、批量领料、开始、删除、结束、开启、查看进度 | 37列；Tab：全部工单、未开始、执行中、快逾期、已逾期、已完成、已作废
+领料单管理 | /production/productionAcquisition | 新增、批量领料、删除、反审核、合并打印 | 表单/看板
+退料单管理 | /production/produceMaterialReturn | 新增、批量退料、审核、反审核、提交、删除、合并打印 | 表单/看板
+报工管理 | /production/applyForWork | 计时052、指派负责人、报工、查看报工记录、撤回工序完成、工序开始、工单开始、工序已完成 | 25列
+审工管理 | /production/auditWork | 一键审核、一键反审核、反审核、审核 | 40列
+成本预测单 | /production/costForecastForm | 新增、审核、反审核、提交、删除、生成报价单、详情、查看审批记录 | 表单/看板
+简易报工 | /home/simpleWorkReport | 修改车间/设备 | 表单/看板；Tab：全部车间、未分配车间、牛马、测试111、333、4534534、全部、未分配设备
+▸ 生产报表
+功能页面 | 路由 | 主要操作 | 规模
+生产计划 | /production/productionPlan | 任务开始 | 16列
+生产工效 | /production/workEfficiency |  | 6列；Tab：人员工效、工单工效
+生产日报 | /production/productionDailyReport |  | 23列
+计时汇总表 | /production/timingReport |  | 29列；Tab：明细、日报、汇总
+生产返工列表 | /production/produceRework | 详情 | 14列
+生产合格率分析 | /production/producePassRate |  | 14列
+工序进度查询 | /production/progressInquiry |  | 52列
+机台生产统计表 | /production/machineProductionStatistics |  | 表单/看板
+销售订单生产进度表 | /salesOrderProductionSchedule |  | 表单/看板
+车间工作汇总表 | /workShopWorkOrderStatistics |  | 表单/看板
+机台订单明细表 | /production/deviceOrderDetail |  | 表单/看板
+工单任务明细表 | /workOrderTaskDetails |  | 表单/看板
+产成品完工明细表 | /workOrderFinishedDetail |  | 表单/看板
+半成品加工明细表 | /materialWorkOrderProduceDetail |  | 表单/看板
+生产缺料表 | /produceMaterialShortage | 领料 | 表单/看板
+生产不良品汇总表 | /defectiveProduceDetail |  | 表单/看板
+生产领料明细表 | /materialAcquisitionDetails |  | 表单/看板
+生产退料明细 | /materialReturnDetails |  | 表单/看板
+报工汇总表 | /reportWorkSummary |  | 表单/看板
+物料齐套查询表 | /workOrderProduceMaterialDemand |  | 表单/看板
+工序任务明细表 | /production/workOrderProcessTaskDetails |  | 表单/看板
+订单排产周负荷统计表 | /production/orderSchedulingWeeklyLoadStatistics |  | 表单/看板
+▸ 生产成本核算
+功能页面 | 路由 | 主要操作 | 规模
+费用类型 | /production/expenseType | 新增、启用、禁用、编辑、删除 | 表单/看板
+费用归集 | /production/costCollection | 新增、删除 | 表单/看板
+费用分配 | /production/distribution | 新增 | 表单/看板
+完工与在制品归集 | /production/completedInProduction | 在制品分配标准设置 | 表单/看板
+生产成本核算 | /production/productionCostAccounting | 数据检查 | 表单/看板
+生产成本核算报告查询 | /production/costReportInquiry | 查看范围、查看计算报告 | 表单/看板
+生产成本构成明细表 | /production/costCompositionDetail |  | 表单/看板
+产成品成本构成明细表 | /production/finishedGoods |  | 表单/看板
+4.4 库存管理（55个页面）
+▸ 物料库存
+功能页面 | 路由 | 主要操作 | 规模
+物料库存 | /inventory/materialInventory |  | 38列
+物料入库 | /inventory/materialPurchasingSystem | 新增、批量入库、审核、反审核、对等核销、合并打印、详情、打印二维码、查看审批记录、提交、编辑 | 表单/看板；Tab：采购入库、期初入库、整单外协入库、工序外协入库、半成品加工入库
+物料调拨 | /inventory/materialTransfer | 新增、提交、审核、反审核、删除、复制、编辑、详情 | 表单/看板
+物料盘点方案 | /inventory/takeStockMaterials | 新增、删除、查看审批流程、查看审批记录、审核、反审核、盈亏处理、详情 | 15列
+物料盘盈单 | /inventory/materialsInventoryProfitForm | 新增、删除、查看审批流程、查看审批记录、审核、反审核、详情 | 表单/看板
+物料盘亏单 | /inventory/materialInventoryLossForm | 新增、删除、查看审批流程、查看审批记录、提交、审核、反审核、编辑、详情 | 表单/看板
+物料批号汇总表 | /inventory/materialBatch |  | 18列
+物料序列号列表 | /inventory/materialSerialNumberList |  | 15列
+物料锁库日志 | /inventory/keyLibraryLog | 释放 | 19列
+▸ 产品库存
+功能页面 | 路由 | 主要操作 | 规模
+产品库存 | /inventory/finishedGoodsInventory |  | 37列
+产品入库 | /inventory/finishedGoodsPurchasingSystem | 新增、批量入库、审核、反审核、对等核销、合并打印 | 30列；Tab：工单生产、成品采购入库、期初入库、整单外协入库
+产品调拨 | /inventory/productInventoryTransfer | 新增、提交、审核、反审核、删除、复制、编辑、详情、查看审批流程、查看审批记录 | 28列
+产品盘点方案 | /inventory/takeProdInventory | 新增、删除、查看审批流程、查看审批记录、提交、审核、反审核、编辑、详情 | 14列
+产品盘盈单 | /inventory/productInventoryProfitForm | 新增、删除、查看审批流程、查看审批记录、审核、反审核、详情、提交、编辑 | 表单/看板
+产品盘亏单 | /inventory/productInventoryLossForm | 新增、删除、查看审批流程、查看审批记录、提交、审核、反审核、编辑、详情 | 表单/看板
+产品批号汇总表 | /inventory/finishedProductBatch |  | 18列
+产品锁库日志 | /inventory/productOccupiedRecord | 释放 | 19列
+产品序列号列表 | /inventory/productSerialNumberList |  | 15列
+▸ 库存业务
+功能页面 | 路由 | 主要操作 | 规模
+其他出库单 | /inventory/otherOutboundItems | 新增、提交、审核、反审核、删除、详情、查看审批记录、编辑 | 表单/看板
+其他入库单 | /inventory/otherWarehouseReceipts | 新增、提交、审核、反审核、删除、详情、查看审批记录 | 表单/看板
+组装拆卸模板 | /inventory/assemblingAndDetachTemplates | 新增、删除、按子件采购 | 21列
+组装单 | /inventory/assembly | 新增、删除、查看审批流程、查看审批记录、审核、反审核、详情 | 23列
+拆卸单 | /inventory/dismantlingOrder | 新增、删除 | 23列
+库存流水 | /inventory/inventoryTakeDetail |  | 25列；Tab：物料、产品
+库存预警查询表 | /inventory/inventoryAlert | 生成采购单、生成工单、采购中、生产中 | 25列；Tab：物料、产品
+产品溯源 | /inventory/finishedProductTraceability |  | 表单/看板
+报废仓库存 | /inventory/scrapMaterialInventory |  | 19列
+▸ 库存报表
+功能页面 | 路由 | 主要操作 | 规模
+产品入库汇总表 | /inventory/productReceiptSummary | 查看明细 | 16列
+产品入库明细表 | /inventory/productReceiptDetails |  | 25列
+产品出库汇总表 | /inventory/productOutStockSummary | 查看明细 | 表单/看板
+产品出库明细表 | /inventory/productOutStockDetails |  | 表单/看板
+产品批号跟踪表 | /inventory/finishedProductBatchTrack |  | 19列
+产品序列号跟踪表 | /inventory/productSerialNumberTrack |  | 17列
+产品仓库分布表 | /inventory/productWarehouseDistributionTable |  | 6列
+虚拟库存状态表 | /inventory/virtualInventoryStatusTable |  | 16列
+其他出入库表 | /inventory/otherInventoryDetailsTable |  | 28列
+调拨明细表 | /inventory/transferDetailsTable |  | 22列
+销售订单出入库明细表 | /inventory/outInStockBillDetail |  | 表单/看板
+物料入库汇总表 | /inventory/materialReceiptSummary | 查看明细 | 16列
+物料入库明细表 | /inventory/materialReceiptDetails |  | 25列
+物料出库汇总表 | /inventory/materialOutStockSummary | 查看明细 | 表单/看板
+物料出库明细表 | /inventory/materialOutStockDetails |  | 表单/看板
+物料批号跟踪表 | /inventory/materialBatchTrack |  | 19列
+物料序列号跟踪表 | /inventory/materialSerialNumberTrack |  | 18列
+物料仓库分布表 | /inventory/materialWarehouseDistributionTable |  | 13列
+库存数量成本明细报表 | /inventory/costBreakdown |  | 表单/看板
+库存数量成本汇总报表 | /inventory/costSummary |  | 表单/看板
+订单物料统计表 | /inventory/salesOrderMaterialStatisticalReport |  | 表单/看板
+▸ 存货核算
+功能页面 | 路由 | 主要操作 | 规模
+成本调整单 | /inventoryAccounting/costAdjustment | 新增、审核、反审核、提交、删除、查看审批流程、查看审批记录、编辑、详情 | 14列
+无成本单据查询 | /inventoryAccounting/noCostDocument |  | 表单/看板
+出库成本核算 | /inventoryAccounting/outboundCostAccounting | 成本核算引导 | 表单/看板
+出库成本核算报告查询 | /inventoryAccounting/outboundCostAccountingReportQuery | 查看范围、查看计算报告 | 10列
+业务关账 | /inventoryAccounting/businessAccountClosure | 关闭前检查、关账、反关账 | 表单/看板
+存货成本定时核算 | /inventoryAccounting/inventoryCostTimingAccounting | 新增、删除、启用、禁用、查看范围、编辑 | 表单/看板
+业务结账 | /inventoryAccounting/businessSettlement | 结账前检查、重算成本、反结账、结账 | 表单/看板
+4.5 质量管理（37个页面）
+▸ 生产质检
+功能页面 | 路由 | 主要操作 | 规模
+生产检验申请单 | /qualityOutProduce/produceInspectApp | 新增、生成生产检验单、审核、反审核、提交、删除、详情、查看审批记录 | 16列
+生产检验单 | /qualityOutProduce/produceInspect | 新增、审核、反审核、提交、删除、详情、入库、查看审批记录 | 14列
+生产检验处理 | /qualityOutProduce/produceInspectProcess | 生成工单、报废入库 | 19列
+工序检验申请单 | /processQuality/processCheckApply | 新增、生成工序检验单、审核、反审核、提交、删除、详情、查看审批记录 | 15列
+工序检验单 | /processQuality/processInspect | 新增、审核、反审核、提交、删除 | 15列
+工序检验处理 | /processQuality/workProcessInspectProcess | 生成报工 | 20列
+▸ 来料质检
+功能页面 | 路由 | 主要操作 | 规模
+采购检验申请单 | /procure/materialCheckApply | 新增、生成采购检验单、审核、反审核、提交、删除、详情、查看审批记录、编辑、查看审批流程 | 17列
+采购检验单 | /procure/qcProcureInspect | 新增、审核、反审核、提交、删除、详情、入库、查看审批记录 | 14列
+采购检验处理 | /procure/qcProcureInspectProcess | 生成采购单、报废入库、生成采购拒收单 | 18列
+采购拒收通知单 | /procure/qcProcureRejection | 生成采购退货单、删除 | 17列
+外协检验申请单 | /qualityOutsource/outsourceInspect | 新增、生成外协检验单、审核、反审核、提交、删除、详情、查看审批记录、编辑、查看审批流程 | 16列
+外协检验单 | /qualityOutsource/assistInspect | 新增、审核、反审核、提交、删除、详情、入库、查看审批记录 | 15列
+外协检验处理 | /qualityOutsource/outsourceInspectProcess | 生成外协单、报废入库 | 20列
+▸ 销售质检
+功能页面 | 路由 | 主要操作 | 规模
+出库检验申请单 | /salesOutInspection/salesOutboundInspectionApp | 新增、生成出库检验单、审核、反审核、提交、删除、详情、查看审批记录 | 14列
+出库检验单 | /salesOutInspection/salesOutboundInspection | 新增、审核、反审核、提交、删除、详情、查看审批记录 | 14列
+出库检验处理 | /salesOutInspection/salesOutboundInspectionHandle | 生成返工单、报废入库 | 16列
+▸ 质检基础
+功能页面 | 路由 | 主要操作 | 规模
+检验方法 | /quality/inspectionMethod | 新增分类、新增、启用、禁用、删除、编辑、详情 | 11列
+成品检验信息 | /quality/qcProdCheckInfo | 新增、启用、禁用、删除、编辑 | 16列
+物料检验信息 | /quality/materialCheck | 新增、启用、禁用、删除、编辑 | 17列
+检验方案 | /quality/inspectionScheme | 新增、启用、禁用、删除 | 11列
+▸ 质检报表
+功能页面 | 路由 | 主要操作 | 规模
+采购检验申请明细表 | /qualityData/materialCheckApplyDetails | 查看明细 | 表单/看板
+供应商采购检验汇总表 | /qualityData/supPurchaseInspectSummary | 查看明细 | 表单/看板
+存货采购检验汇总表 | /qualityData/inventoryPurchaseInspectSummary | 查看明细 | 表单/看板
+采购检验明细表 | /qualityData/purchaseInspectionDetails |  | 表单/看板
+外协检验申请明细表 | /qualityData/outsourceCheckApplyDetails | 查看明细 | 表单/看板
+供应商外协检验汇总表 | /qualityData/supOutsourceInspectSummary | 查看明细 | 表单/看板
+存货外协检验汇总表 | /qualityData/inventoryOutsourceInspectSummary | 查看明细 | 表单/看板
+外协检验明细表 | /qualityData/outsourceInspectionDetails |  | 表单/看板
+生产检验申请明细表 | /qualityData/productCheckApplyDetails |  | 表单/看板
+生产检验汇总表 | /qualityData/productInspectSummary | 查看明细 | 表单/看板
+生产检验明细表 | /qualityData/productionInspectionDetails |  | 表单/看板
+工序检验申请明细表 | /qualityData/processCheckApplyDetails | 查看明细 | 表单/看板
+工序检验汇总表 | /qualityData/processInspectSummary | 查看明细 | 表单/看板
+工序检验明细表 | /qualityData/processInspectionDetails |  | 表单/看板
+出库检验申请明细表 | /qualityData/salesOutboundInspectionAppDetails | 查看明细 | 表单/看板
+出库检验汇总表 | /qualityData/salesOutboundInspectionSummary | 查看明细 | 表单/看板
+出库检验明细表 | /qualityData/salesOutboundInspectionDetails |  | 表单/看板
+4.6 外协管理（28个页面）
+▸ 外协单据
+功能页面 | 路由 | 主要操作 | 规模
+整单外协 | /outsourcingManagement/outsourceAll | 新增、审核、删除、录入发票信息、合并打印、批量打印、编辑、详情、查看审批流程、完工、反审核、入库、手动完成 | 表单/看板
+工序外协 | /outsourcingManagement/processOutsourcing | 新增、审批通过、删除、录入发票信息、合并打印、批量打印 | 表单/看板
+整单外协领料 | /production/productionAcquisition?type=2 | 新增、批量领料、删除、反审核、合并打印、详情、查看审批记录 | 表单/看板
+工序外协领料 | /production/productionAcquisition?type=3 | 新增、批量领料、删除、反审核、合并打印 | 表单/看板
+整单外协成品入库 | /inventory/finishedGoodsPurchasingSystem?orderType=3 | 新增、批量入库、审核、反审核、对等核销、合并打印、提交、编辑、详情、打印二维码、删除、查看审批流程、查看审批记录 | 44列；Tab：工单生产、成品采购入库、期初入库、整单外协入库
+整单外协物料入库 | /inventory/materialPurchasingSystem?billType=110 | 新增、批量入库、审核、反审核、对等核销、合并打印 | 表单/看板；Tab：采购入库、期初入库、整单外协入库、工序外协入库、半成品加工入库
+工序外协入库 | /inventory/materialPurchasingSystem?billType=120 | 新增、批量入库、审核、反审核、对等核销、合并打印、详情、打印二维码、查看审批记录、提交、编辑 | 表单/看板；Tab：采购入库、期初入库、整单外协入库、工序外协入库、半成品加工入库
+外协退料 | /production/produceMaterialReturn?type=2 | 新增、批量退料、审核、反审核、提交、删除、合并打印 | 表单/看板
+外协退货 | /outsourcingManagement/outsourcedReturn | 新增、删除、反审核 | 表单/看板
+委外返工列表 | /outsourcingManagement/outsourcedRework | 详情 | 9列
+外协退货入库单 | /outsourcingManagement/osOutsourcingReturnInStock | 新增、批量操作、反审核、详情、审核、提交、编辑、删除 | 表单/看板
+外协询价单 | /outsourcingManagement/outsourceInquiryForm | 新增、提交、审核、反审核、删除、详情、作废 | 表单/看板
+▸ 外协报表
+功能页面 | 路由 | 主要操作 | 规模
+外协跟踪明细表 | /outsourcingPlatform/trackingDetails |  | 53列；Tab：整单外协明细、工序外协明细
+外协入库汇总表 | /outsourcingPlatform/outsourcedWarehousingSummary | 查看明细 | 15列
+外协入库明细表 | /outsourcingPlatform/outsourcedWarehouseEntryDetails |  | 29列
+外协发料明细表 | /outsourcingPlatform/outsourcingMaterialRequisitionDetails |  | 24列
+外协退料明细表 | /outsourcingPlatform/outsourcedMaterialReturnDetails |  | 23列
+外协退货明细表 | /outsourcingPlatform/outsourcedReturnDetails |  | 22列
+外协成本汇总表 | /outsourcingPlatform/outsourcingCostSummary |  | 27列
+外协报表 | — |  | 
+外协材料损耗汇总表 | /outsourcingPlatform/outsourcedMaterialLossesSummary | 查看明细 | 12列
+外协材料损耗明细表 | /outsourcingPlatform/outsourcedMaterialLossesDetails |  | 16列
+外协供应商分析表 | /outsourcingPlatform/outsourcingSupplierOutsourcingAnalysis |  | 16列
+外协质量统计表 | /outsourcingPlatform/passRate |  | 18列
+外协退货分析表 | /outsourcingPlatform/outsourcedReturnAnalysisReport |  | 15列
+外协加工对账明细表 | /outsourcingPlatform/outsourcedProcessingRecordDetails |  | 35列
+▸ 外协成本核算
+功能页面 | 路由 | 主要操作 | 规模
+委外成本核算 | /outsourcingAccount/costAccount |  | 表单/看板
+委外成本核算报告查询 | /outsourcingAccount/costReportInquiry | 查看范围、查看计算报告 | 表单/看板
+4.7 物料管理（9个页面）
+▸ BOM管理
+功能页面 | 路由 | 主要操作 | 规模
+订单BOM | /materialManagement/orderBOM | 一键审核、反审核、删除 | 表单/看板
+标准BOM | /materialManagement/materialBOM | 新增、删除、审核、反审核、批量导入、批量导出、复制、编辑、详情、查看审批记录 | 17列
+半成品BOM | /materialManagement/semisBOM | 新增、删除、审核、反审核、批量导入、批量导出、更新BOM、复制、详情、查看审批记录 | 15列
+BOM成本查询 | /materialManagement/bomMaterialCostQuery | 参数设置 | 表单/看板
+BOM批量查询表 | /materialManagement/bomMaterialBatchQuery |  | 表单/看板
+▸ 物料管理
+功能页面 | 路由 | 主要操作 | 规模
+物料档案 | /materialManagement/material | 新增分类、新增物料、删除、批量修改、批量打印二维码、批量打印条形码、更新、导入分类、导入子分类 | 1列
+物料动态价格表 | /materialManagement/materialDynamicPrice | 新增 | 10列
+加工工序管理 | /materialManagement/materialProcess | 批量导入、删除、知道了 | 11列；Tab：产品、半成品
+替代料关系 | /materialManagement/substituteRelation | 新增、删除、编辑 | 24列
+4.8 财务管理（70个页面）
+▸ 应收应付
+功能页面 | 路由 | 主要操作 | 规模
+入库应付 | /financial/inventoryPayable | 开票、付款、详情 | 表单/看板
+客户应收 | /financial/customerReceivable | 收款、生成发票 | 32列
+其他支出 | /financial/otherExpend | 新增、审核、反审核、提交、删除、付款、录入发票信息、详情、查看审批记录、编辑 | 表单/看板
+其他收入 | /financial/otherIncome | 新增、审核、反审核、提交、删除、收款、录入发票信息、详情 | 表单/看板
+其他支出退款单 | /financial/otherExpendRefund | 新增、审核、反审核、提交、删除、退款、录入发票信息、详情、查看审批记录 | 表单/看板
+其他收入退款单 | /financial/otherIncomeRefund | 新增、审核、反审核、提交、删除、退款、录入发票信息、详情、查看审批记录、编辑 | 表单/看板
+采购退款 | /financial/purchaseRefund | 退款、提交、审核、详情 | 17列
+销售退款 | /financial/saleRefund | 退款、生成发票、提交、审核、详情、反审核 | 表单/看板
+外协退款 | /financial/outsourcedRefund | 退款 | 18列
+预收款单 | /financial/advancesOnSales | 新增、编辑、审核、反审核、详情、查看审批流程、查看审批记录、提交、删除 | 16列
+预付款单 | /financial/advanceBill | 新增、编辑、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录 | 20列
+付款单 | /financial/payment | 新增、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录 | 21列
+付款退款单 | /financial/paymentReturn | 新增、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录、编辑 | 20列
+收款单 | /financial/receipt | 新增、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录、编辑 | 21列
+收款退款单 | /financial/receiptReturn | 新增、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录、编辑 | 20列
+▸ 财务基础
+功能页面 | 路由 | 主要操作 | 规模
+核销单 | /financial/writeOff | 新增、审核、反审核、提交、删除 | 15列
+客户对账台 | /financial/customerTower | 创建对账单 | 表单/看板
+供应商对账台 | /financial/supplierTower | 创建对账单 | 表单/看板
+绩效工资 | /financialManage/performancePay |  | 20列
+工资报表 | /financialManage/payroll |  | 7列
+费用分摊 | /costAccounting/costSharing | 新增、审核、反审核、提交、删除、详情、查看审批流程、查看审批记录、编辑 | 20列
+生成凭证 | /financialManage/generateVoucher | 生成凭证、凭证设置 | 表单/看板
+业务凭证模版 | /financialManage/businessVoucherTemplate | 新增、启用、禁用、编辑、删除 | 11列
+科目关联设置 | /financialManage/subjectAssociationSettings | 批量设置科目 | 表单/看板
+凭证生成日志 | /financialManage/voucherGenerationLog |  | 表单/看板
+▸ 总账
+功能页面 | 路由 | 主要操作 | 规模
+录凭证 | /ledger/recordVoucher | 偏好设置、更多凭证、清除、快速凭证、存为模版、保存并新增 | 2列；Tab：全部、资产、负债、权益、成本、损益
+查凭证 | /ledger/generalLedger | 更多筛选、新增、删除、审核、反审核、记账、反记账、整理凭证、红字冲销、补充外币 | 16列
+明细账 | /ledger/generalLedger/log | 更多筛选 | 表单/看板
+数量金额明细账 | /ledger/quantityAmount | 更多筛选 | 表单/看板
+科目余额表 | /ledger/accountBalanceReport | 更多筛选 | 表单/看板
+总分类账 | /ledger/generalAccount | 更多筛选 | 表单/看板
+数量金额明细总账 | /ledger/quantityAmountGeneralAccount | 更多筛选 | 表单/看板
+多栏账 | /ledger/multiColumn | 更多筛选 | 表单/看板
+核算项目余额表 | /ledger/ledger/balanceReport | 更多筛选 | 表单/看板
+核算项目明细表 | /ledger/accountingProject | 更多筛选 | 表单/看板
+核算项目组合表 | /ledger/ledger/combineReport | 更多筛选 | 表单/看板
+期末结账 | /ledger/ledger/endingClosing | 检查项设置、反结账、结账 | 表单/看板
+多组织查询 | /ledger/multiOrganizationQuery | 查询 | 表单/看板；Tab：科目余额表
+▸ 固定资产
+功能页面 | 路由 | 主要操作 | 规模
+基础资料 | /fixedAssets/basicData | 新增、编辑、删除 | 表单/看板；Tab：固定资产类别、存放地点、使用状态、变动方式
+资产清单 | /fixedAssets/assetCard | 新增、提交、审核、反审核、删除、打印资产列表、打印资产卡片/标签、详情、复制、打印资产卡片、打印资产标签、查看审批记录、编辑 | 表单/看板
+资产变动 | /fixedAssets/assetChange |  | 表单/看板
+资产清理 | /fixedAssets/assetClear | 新增、提交、审核、反审核、删除、编辑、详情、查看审批流程 | 表单/看板
+折旧计提 | /fixedAssets/assetDepreciation | 计提折旧、查看折旧明细 | 表单/看板
+折旧调整 | /fixedAssets/assetDepreciationAdjust | 新增、提交、审核、反审核、删除、详情 | 表单/看板
+折旧明细表 | /fixedAssets/assetDepreciationDetail |  | 表单/看板
+折旧汇总表 | /fixedAssets/assetDepreciationSummary |  | 表单/看板
+资产结账 | /fixedAssets/assetClosing | 反结账、结账 | 表单/看板
+▸ 财务报表
+功能页面 | 路由 | 主要操作 | 规模
+应付账款明细表 | /paymentReport/accountsPayable |  | 表单/看板
+应付账款汇总表 | /paymentReport/accountsPayableSummary |  | 表单/看板
+应收账款明细表 | /paymentReport/accountsReceivable |  | 表单/看板
+应收账款汇总表 | /paymentReport/accountsReceivableSummary |  | 表单/看板
+供应商对账单 | /paymentReport/supplierReconciliation |  | 表单/看板
+客户对账单 | /paymentReport/customerReconciliation |  | 表单/看板
+应付账款预警表 | /paymentReport/accountsPayableWarning | 预警设置 | 表单/看板
+应收账款预警表 | /paymentReport/accountsReceivableWarning | 预警设置 | 表单/看板
+供应商账龄分析表 | /paymentReport/supplierOverview |  | 表单/看板
+客户账龄分析表 | /paymentReport/customerOverview |  | 表单/看板
+其他收支明细表 | /paymentReport/otherIncomeOrExpend |  | 表单/看板
+利润表 | /financialStatements/profitStatement | 编辑报表、数据列互换 | 表单/看板
+资产负债表 | /financialStatements/balanceSheet | 编辑报表、数据列互换 | 表单/看板
+现金流量表 | /financialStatements/cashFlowStatement | 调整、平衡检查、编辑报表、数据列互换 | 表单/看板
+现金流量表初始额 | /financialStatements/initialSmountCashFlowState | 平衡检查 | 3列
+▸ 现金银行
+功能页面 | 路由 | 主要操作 | 规模
+银行账号设置 | /cashBank/bankAccountSettings | 新增、禁用、编辑、删除 | 10列
+日记账 | /cashBank/dayBook | 新增 | 9列
+账间转账 | /cashBank/interAccountTransfer | 新增、审批通过、审批不通过、详情、编辑、删除 | 14列
+各账户汇总及明细 | /cashBank/bankAccountChangeDetail | 账目明细 | 7列
+银行卡账款明细表 | /cashBank/bankCardAccountDetails |  | 6列
+收支类别 | /cashBank/revenueExpenditure | 新增、启用、禁用、删除、编辑 | 10列；Tab：收入类别、支出类别
+账单分类 | /bankSetup/billClassification | 新增 | 4列
+财务账期 | /bankSetup/financialAccountPeriod | 新增、编辑、删除 | 10列
+4.9 项目管理（5个页面）
+▸ 项目管理
+功能页面 | 路由 | 主要操作 | 规模
+项目类型 | /project/projectPhaseType | 新增、编辑、复制、删除 | 表单/看板
+项目角色 | /project/projectRole | 新增、启用、禁用、删除、编辑 | 8列
+项目管理 | /project/projectManagement | 新增、生成单据、提交、审核、反审核、删除、进度汇报、洽谈进展、详情、编辑 | 25列
+项目进度填报 | /project/projectProgress | 新增、审核、删除、详情、编辑 | 17列
+项目利润表 | /project/projectReport |  | 26列
+4.10 数据报表（29个页面）
+▸ 数据看板
+功能页面 | 路由 | 主要操作 | 规模
+生产看板 | /home/productionBoard |  | 表单/看板
+设备看板 | /home/equipmentBoard |  | 表单/看板
+车间看板 | /home/workshopNoticeboard |  | 表单/看板
+物料库存看板 | /home/materialInventory |  | 12列
+成品库存看板 | /home/finishedGoodsInventory |  | 11列
+销售出库看板 | /home/finishedProductOutbound |  | 14列
+物料库存流水看板 | /home/wlInventoryTakeDetail |  | 13列
+成品库存流水看板 | /home/cpInventoryTakeDetail |  | 13列
+计时明细看板 | /home/details |  | 23列
+计时日报看板 | /home/daily |  | 13列
+计时汇总看板 | /home/collect |  | 12列
+▸ 销售数据
+功能页面 | 路由 | 主要操作 | 规模
+龙虎榜 | /customerPerformance/billboard |  | 9列
+销售利润表 | /customerPerformance/sellingProfit |  | 9列
+客户销售排行 | /customerPerformance/customerSalesRanking | 明细 | 6列
+客户购买汇总 | /customerPerformance/customerPurchaseSummary |  | 10列
+客户购买明细 | /customerPerformance/customerPurchaseDetails |  | 15列
+销售出库明细表 | /customerPerformance/salesOutboundDetails |  | 26列
+销售出库业绩分析 | /customerPerformance/performanceAnalysis |  | 9列
+销售数据明细表 | /customerPerformance/salesDataDetails |  | 37列
+销售汇总表 | /summaryTable/salesSummary |  | 6列
+▸ 采购数据
+功能页面 | 路由 | 主要操作 | 规模
+采购供货明细 | /purchasingData/supplyDetails |  | 16列
+入库明细 | /purchasingData/warehousingDetails |  | 17列
+采购退货明细 | /purchasingData/returnDetails |  | 15列
+采购汇总表 | /summaryTable/procurementSummary |  | 6列
+▸ 成本数据
+功能页面 | 路由 | 主要操作 | 规模
+采购成本管理 | /cost/purchasingCostManagement | 详情 | 9列
+销售成本管理 | /cost/salesCostManagement | 详情 | 10列
+投料成本管理 | /productionCost/costOfFeeding | 详情 | 9列
+人工成本管理 | /productionCost/laborCostManagement | 详情 | 8列
+在制品成本管理 | /productionCost/productionOrder | 详情 | 10列
+4.11 人事办公（35个页面）
+▸ 人事管理
+功能页面 | 路由 | 主要操作 | 规模
+用人申请 | /recruitmentManage/staffApply | 用人申请、删除、详情、查看审批记录、审核 | 8列
+员工入职 | /personnelTransfer/staffInduct | 新增入职、详情 | 8列
+员工转正 | /personnelTransfer/staffPromotion | 转正申请、删除、反审核、详情、查看审批记录、审核 | 9列
+员工离职 | /personnelTransfer/staffDimission | 离职申请、删除、详情、查看审批记录、审核 | 10列
+招聘报表 | /recruitmentManage/staffApplyReportList |  | 6列
+入职报表 | /personnelTransfer/staffBoard |  | 7列
+离职报表 | /personnelTransfer/staffDimissionList |  | 7列
+▸ 考勤管理
+功能页面 | 路由 | 主要操作 | 规模
+班次管理 | /attendanceManagement/shiftSettings | 新增班次、编辑、详情、删除 | 8列
+人员分组管理 | /attendanceManagement/personnelGrouping | 新增人员分组、编辑、详情、删除 | 7列
+排班管理 | /attendanceManagement/workforceManagement | 新增排班、编辑、详情、删除 | 7列
+考勤汇总表 | /attendanceStatistics/attendanceSummaryTable |  | 表单/看板
+原始打卡记录 | /attendanceStatistics/OriginalOpenRecord |  | 11列
+假期设置 | /holiday/holidaySetting | 编辑、详情、禁用 | 6列
+假期余额 | /holiday/holidayBalance | 导出余额、导入余额、查看 | 12列
+请假管理 | /holiday/staffLeave | 请假申请、删除、详情、查看审批记录 | 10列
+请假报表 | /holiday/staffLeaveReportList |  | 7列
+▸ 工资绩效
+功能页面 | 路由 | 主要操作 | 规模
+社会保险设置 | /salaryManagement/socialSecuritySet | 新增方案、编辑、详情、删除 | 7列
+薪酬管理 | /salaryManagement/salaryAdjustment | 调薪申请、删除、详情、查看审批记录 | 12列
+工资列表 | /salaryManagement/salaryList | 新建工资表、删除、自定义项、详情、查看审批流程、查看审批记录 | 12列
+工资查询 | /salaryManagement/salaryQuery | 查询明细 | 7列
+工资统计 | /salaryManagement/salaryReport |  | 表单/看板
+指标列表 | /performanceAppraisal/indicatorList | 新增指标、删除、详情、编辑 | 8列
+绩效方案 | /performanceAppraisal/performancePlan | 新增考核表、删除、详情、打印评分表、查看评分结果、修改评分、完成考核、编辑、发起考核 | 8列
+绩效统计 | /performanceAppraisal/statistics | 详情 | 9列
+▸ 办公用品
+功能页面 | 路由 | 主要操作 | 规模
+用品档案 | /officeSupplies/officeSuppliesRecord | 新增分类、新增办公用品、删除、编辑、详情 | 10列
+用品入库 | /officeSupplies/officeSuppliesEntry | 新增用品入库、删除、详情 | 6列
+用品入库明细 | /officeSupplies/officeSuppliesEntryList |  | 13列
+用品领用 | /officeSupplies/officeSuppliesReceive | 新增用品领用、删除、详情 | 7列
+用品领用明细 | /officeSupplies/officeSuppliesReceiveList |  | 12列
+用品归还 | /officeSupplies/officeSuppliesReturned | 新增用品归还、删除、详情 | 7列
+用品盘点 | /officeSupplies/officeSuppliesCheck | 新增用品盘点、详情 | 6列
+用品库存明细 | /officeSupplies/officeSuppliesInventory |  | 10列
+▸ 档案资料
+功能页面 | 路由 | 主要操作 | 规模
+文档列表 | /documentMge/documentManagement | 新增分类、新增文档、删除、提交、详情、编辑、查看审批流程、查看审批记录、反审核 | 10列；Tab：所有文档、文档管理
+员工档案 | /personnelRecord/staffRecord | 新增档案、去开通、编辑、详情、删除 | 13列
+员工合同 | /personnelRecord/staffContract | 新增合同、编辑、详情、删除 | 11列
+4.12 设备管理（4个页面）
+▸ 机台设备管理
+功能页面 | 路由 | 主要操作 | 规模
+机台设备列表 | /deviceManage/deviceList | 新增分类、新增设备、启用、禁用、批量打印、维修、保养、删除、导入分类、详情、编辑、生产记录 | 1列
+设备维修记录 | /deviceManage/maintenanceList | 删除、详情 | 表单/看板
+设备保养记录 | /deviceManage/maintainList | 删除、详情 | 表单/看板
+▸ 工模具管理
+功能页面 | 路由 | 主要操作 | 规模
+工模具列表 | /moldManage/toolDie | 新增分类、新增工模具、删除、导入分类、详情、编辑、领用、维修、归还 | 12列
+4.13 基础数据（35个页面）
+▸ 业务数据
+功能页面 | 路由 | 主要操作 | 规模
+产品管理 | /metadata/productCategory | 新增分类、新增产品、删除、批量修改、批量打印二维码、批量打印条形码、更新、导入分类、导入子分类 | 13列
+单位管理 | /metadata/unit | 新增单位、启用、禁用、删除、编辑 | 6列
+多单位转换率 | /metadata/unitConversionRate | 启用、禁用、编辑 | 表单/看板
+仓库管理 | /metadata/store | 新增、编辑、禁用、删除 | 9列
+库区管理 | /metadata/reservoirArea | 新增、启用、禁用、删除、编辑 | 11列
+库位管理 | /metadata/warehouseLocation | 新增、启用、禁用、删除、编辑 | 12列
+供应商列表 | /metadata/produceSupplier | 新增、更新、删除、编辑、详情 | 16列
+结算期限 | /metadata/settlementPeriod | 新增、启用、禁用、删除、编辑 | 8列
+客户价格资料 | /metadata/customerPrice | 新增、启用、禁用、删除、复制、编辑 | 11列
+基础数据新增字段 | /metadata/custom | 新增、删除 | 7列
+业务单据模板设计 | /metadata/docTemplateDesign | 上移、下移、自定义项设置 | 表单/看板；Tab：表头、联系信息、表体（产品）、表体（物料）
+▸ 生产数据
+功能页面 | 路由 | 主要操作 | 规模
+工序管理 | /metadata/process | 新增工序、更新、删除、批量设置标准单价、批量设置计价方式、编辑、详情 | 15列
+不良品项 | /metadata/badnessProduct | 新增分类、新增不良品项、编辑、删除 | 8列；Tab：不良品项分类、不良原因分类
+工艺路线 | /metadata/processTemplate | 新增、批量导入、批量导出、删除、编辑、复制 | 表单/看板
+图纸管理 | /metadata/drawingManagement | 上传图纸、关联图纸、删除、编辑 | 5列
+工作组 | /metadata/workGroup | 新增、启用、禁用、删除、编辑 | 表单/看板
+工作日历 | /metadata/workCalendar | 批量设置、返回本月 | 表单/看板
+薪酬设置 | /metadata/salarySetting | 更新、编辑 | 7列
+序列号管理 | /metadata/serialNumber | 创建序列号、设置序列号自动生成规则、查看/下载、编辑、启用、停用、删除 | 15列
+车间管理 | /metadata/workShop | 新增、启用、禁用、删除、编辑、查看工序 | 表单/看板
+作业指导书 | /metadata/guidebook | 新增、删除、编辑、详情 | 表单/看板
+▸ 财务资料
+功能页面 | 路由 | 主要操作 | 规模
+辅助核算 | /financialInformation/auxiliaryAccounting | 新增、删除、编辑 | 5列
+凭证模板 | /financialInformation/voucherTemplate | 新增、删除、编辑 | 11列
+凭证字 | /financialInformation/voucherType | 新增、删除、编辑 | 4列
+科目列表 | /financialInformation/accountingSubjectList | 新增、删除、启用、禁用、编辑 | 表单/看板；Tab：资产、负债、权益、成本、损益
+凭证摘要 | /financialInformation/documentExtract | 新增、编辑、删除 | 3列
+支付方式 | /financialInformation/payment | 新增、禁用、编辑、删除 | 4列
+票据类型 | /financialInformation/billType | 新增、禁用、编辑、删除 | 6列
+币别 | /financialInformation/currency | 新增、删除、编辑 | 6列
+▸ 期初录入
+功能页面 | 路由 | 主要操作 | 规模
+物料期初录入 | /metadata/materialOpenningEntering | 审核、删除、反审核 | 18列
+产品期初录入 | /metadata/productOpenningEntering | 审核、删除、反审核 | 18列
+供应商期初 | /beginAmount/supplier | 新增、删除 | 12列
+客户期初 | /beginAmount/customer | 新增、删除、编辑 | 12列
+期初设置 | /beginAmount/setBeginningAmount | 按辅助项录入、试算平衡、结算初始化/反初始化 | 表单/看板；Tab：资产、负债、权益、成本、损益
+导入导出记录 | /dataReport/importRecord | 刷新数据、查看 | 11列
+五、重点模块功能布局详述
+5.1 首页 · 系统架构
+首页为“系统架构一览图”，以流程箭头串联六大业务域，帮助用户理解业务闭环：
+基础配置：角色用户管理、物料管理、工艺路线、产品管理、标准BOM、编码规则、图纸管理、不良品项、工序管理、仓库管理、序列号管理、客户价格资料；
+销售：客户管理→报价→销售单/合同→订单BOM→设计中心→销售出库/送货→售后、退货、退款、发票；
+采购：MRP计划→供应商→采购订单→采购审批→质检收货→采购核销/退货；
+生产：主生产计划→生产计划→生产工单→生产领料→工序执行→成品（含委外生产）；
+库管：物料入库、库存调拨、库存预警、成品入库、出库、库存盘点；
+财务：总账、报表、应收/预收、应付/预付、现金银行、发票、工资、固定资产。
+5.2 驾驶舱（经营数据看板）
+驾驶舱以卡片+图表方式集中呈现经营全貌，自上而下、自左向右包含：
+数据概览 KPI 行：销售订单准时率、工单生产准时率、销售订单总金额、生产总产值、采购订单总金额、应付/已付金额、库存周转率、物料库存金额、成品库存金额；
+快捷菜单区（可配置常用功能入口）；
+待办中心：按 销售/BOM/采购/生产/外协/库存/质量/财务/项目/人事 分类页签展示待审单据（待审销售单、待确认BOM、待审采购单、待审入库单等）；
+销售/采购实时数据：按“本日/本月”切换，统计订单、出库/入库、退货单数与金额、新增客户/供应商；
+图表区：销售趋势、净利润趋势与结构、产品汇总统计TOP8、工单统计、物料/产品库存情况；在制工单以卡片展示工序进度与是否延期。共约10个图表，支持“配置驾驶舱”自定义。
+5.3 生产工单（核心模块，重点）
+生产工单是生产执行的核心单据，菜单路径：生产管理 → 生产单据 → 生产工单，路由 #/production/workOrder。
+(1) 列表页布局
+状态页签：全部工单、未开始、执行中、快逾期、已逾期、已完成、已作废，共7个，点击即按状态过滤；
+筛选区：默认显示“工单编号、产品编号/名称”，点“展开”后含产品规格、产品属性、生产类型、源单编号、外协状态、计划时间范围、质检状态、工序/工序状态、紧急状态、客户名称/编码、机台状态、客户交期、客户订单编号、入库状态、创建人、备注、更新时间、完工状态、负责人、产品分类、制单日期、自选产品等 25+ 条件，支持搜索/重置与近N天快捷；
+工具栏：新增工单、导出、批量打印工艺流转卡、合并打印工艺流转卡、批量领料、批量开始/删除/结束/完工、开启、查看进度、列表字段（未勾选记录时批量按钮置灰）；
+数据表格：35 列，含工单编号、工单状态、产品名称/编码/规格、客户信息、客户订单编号、入库状态、计划数/基本数量/已入库数量、生产/外协工序数、外协状态、客户交期、计划开始/结束时间、机台状态、制单日期、质检状态、负责人、领料状态、完工状态/时间、创建人/时间、更新人/时间、备注、操作；底部带数量合计行与分页器（当前共324条、33页）。
+(2) 行内操作随状态变化（状态—操作矩阵）
+工单状态 | 可用行操作
+未开始 | 编辑、复制、开始、详情、删除、领料、生成计划、完工
+执行中 / 已逾期 | 复制、撤回、结束、详情、领料、入库、按单代报、完工
+已完工 | 复制、详情
+已完成 | 复制、详情、领料、作废、入库、完工、反完成（或 开启、反完成）
+已作废 | 复制、详情、删除、完工
+(3) 新增生产工单页（#/production/workOrder/add）
+顶部：取消、保存；主体分“基础资料”和“产品详情”两大块；
+基础资料字段：工单编号*、制单日期*、生产类型、部门*、项目、项目阶段、计划开始*、计划结束*、紧急程度*、是否有工序外协、版本号(≤100字)、负责人、备注(≤200字)、附件上传、客户订单编号（带*为必填，共6项必填）；
+产品详情：含“工序设置 / 产品信息”两个页签，通过“选择产品”加入产品明细行，列为产品图、产品名称/编号/规格/属性、基本单位、可用库存、基本数量、辅助单位、计划数（辅助数量）、操作。
+(4) 生产工单详情页
+顶部操作：编辑、打印记录、打印作业指导书、单据二维码、打印流转卡、赶工一下、入库、返回上一页；
+基础资料只读区展示工单全部主信息与工单状态、设备、附件；
+产品详情表 + 加工物料信息（按BOM展开：物料名称/编码/型号/规格/类别、单位用量、计划产出、已生产、待生产、已入库、待入库等）；
+业务记录页签：报工记录、关联单据、工序信息、操作记录、物料BOM，共5个。
+5.4 销售订单（典型业务单据）
+路径：销售管理→销售单据→销售订单（#/sale/saleOrder），列表49列。新增页（#/sale/saleOrder/add）采用“多分区主表 + 明细子表”：
+主表折叠分区：基础信息（客户、销售单号/类型、交货日期、专员、付款方式、结算期限、发票类型、含税/不含税金额、项目、附件等）、收货信息、物流信息、联系信息、财务信息（开票与银行资料）、费用及收款信息（整单折扣额/率、成交金额、收款账号）；
+明细区：产品列表 / 物料列表 两个页签，提供选择产品、客户产品、客户物料、已售产品、批量填充、历史价格、子件库存、智能交期评估、编辑费用等辅助工具；顶部可保存草稿或直接提交。
+5.5 物料档案（典型左树右表）
+路径：物料管理→物料管理→物料档案（#/materialManagement/material）。左侧为物料分类树（手机/纸巾/空调等，支持新增分类、分类导入、子分类导入、编辑分类）；右侧为选中分类下的物料列表，固定列+横向滚动，字段含物料图片、名称、编码、型号、规格、类别、基本/库存/生产/采购单位、多单位与副单位启用状态、销售单价（含税/最低/最高）、条形码、使用状态、序列号、二维码及创建/更新信息。工具栏支持新增物料、导入、批量修改、批量打印二维码/条形码、更新；行内支持复制、编辑、详情、打印二维码/条形码、下载序列号。产品管理、供应商列表、设备/工模具等档案页布局与之同构。
+5.6 其他关键页面布局要点
+报工管理（#/production/applyForWork）：25列列表，行内可工单开始、工序开始、报工、指派负责人、查看报工记录、撤回工序完成、工序已完成，是车间执行的操作台；
+简易报工（#/home/simpleWorkReport）：全屏车间模式，进入后隐藏左侧菜单与页签栏，按“车间—设备”两级页签筛选、按未完成/已完成切换，供车间终端快速报工；
+物料/产品入库：多类型页签合一（如物料入库含采购入库、期初入库、整单/工序外协入库、半成品加工入库），支持批量入库、审核/反审核、对等核销；
+质量检验四线：生产质检、工序质检、来料（采购/外协）质检、出库质检，均按“检验申请单→检验单→检验处理（生成下游单据/报废入库）”三段式布局；
+成本核算类（生产/委外/出库成本核算）：向导式页面，提供数据检查/成本核算引导→开始核算→查看范围与计算报告；业务关账/结账提供关闭前检查、关账/反关账、结账/反结账。
+六、端到端业务主流程
+① 销售到生产主线：客户/线索 → 报价单 → 合同/销售订单 → 订单BOM/设计中心 →（MRP计划/主生产计划）→ 生产排产/生产工单 → 领料 → 工序报工/审工（可委外外协）→ 完工 → 产品入库 → 销售出库/送货 → 发票/核销/收款。
+② 采购到付款主线：采购申请/询价 → 采购订单 → 到货检验（来料质检）→ 物料入库 → 采购发票 → 采购核销 → 付款；异常走采购退货/退款。
+③ 委外加工主线：整单外协/工序外协 → 外协领料 → 外协检验 → 外协入库 → 外协成本核算与对账。
+④ 库存与财务闭环：出入库流水 → 出库成本核算/业务关账结账 → 生成凭证 → 总账/报表（利润表、资产负债表、现金流量表）→ 应收应付与现金银行。
+七、前端高保真复刻规格（可据此还原页面）
+本章目标：让前端或 AI 仅凭本章即可还原出与原系统观感、结构、交互相近的页面。技术栈实际为 Vue2 + Element UI + vue-router(hash)，复刻时使用 Vue3 + Element Plus 等价组件即可。
+7.1 设计 Token（颜色/字体/尺寸）
+类别 | Token | 值 | 用途
+主色 | --el-color-primary | #C00000（酒红） | 主按钮、选中/激活、必填星号、关键链接、品牌色
+辅助色 | success/warning/danger/info | #67C23A / #E6A23C / #A10000 / #909399 | 成功/警示/危险/次要文本与状态标签
+背景 | page / 容器 | #F8F7F7 / #FFFFFF | 主内容区灰底，卡片、侧栏、表格、页签栏白底
+文字 | 主文本/次要/边框 | #000000 / #909399 / #606266 | 正文14px；辅助信息灰色；输入框边框#606266
+字体 | font-family / size | Microsoft YaHei（微软雅黑）/ 14px | 全局基准字号14px，表头字重600
+圆角 | 按钮 / 输入框 | 8px / 0px | 按钮圆角8px；输入框为直角(0)
+控件高度 | 输入框/按钮/表头/行 | 30 / 32 / 40 / 约40px | 输入30、主按钮32、表头40
+布局宽 | 左侧导航固定宽 | 140px | 白底，选中项红字/红底高亮
+布局高 | 顶部页签栏 | 60px | 白底，承载多窗口页签
+7.2 整体框架线框与切分
+┌──────────────────────────────────────────────────────────┐
+│ 顶部栏: Logo+企业名 | 全局菜单搜索 | 行业必读 新手引导 | 用户 │ 高约50
+├────────┬─────────────────────────────────────────────────┤
+│        │ 页签栏(高60): [系统架构][驾驶舱][生产工单]x ...    │
+│ 左侧   ├─────────────────────────────────────────────────┤
+│ 导航   │                                                 │
+│ 140px  │        主内容区(灰底#F8F7F7, 内部白色卡片)        │
+│ 白底   │                                                 │
+│ 21项   │                                                 │
+└────────┴─────────────────────────────────────────────────┘
+实现要点：整体为“顶部栏 + 左侧菜单 + 右侧(页签栏 + 多页面容器)”的经典后台布局；右侧用 keep-alive 缓存已打开页面，页签与路由一一对应，最多保留20个；左侧一级菜单 hover 时在其右侧弹出二级浮层（分组标题 + 菜单项两列结构）。
+7.3 通用组件规范
+(1) 状态页签 Tabs
+位于列表顶部，横向胶囊/下划线式；未选中黑字，选中项为红底白字或红字红边框（如生产工单7状态Tab）；点击即带状态条件查询并刷新表格。
+(2) 筛选区 FilterForm
+el-form inline 布局，输入框高30px、直角；常用条件常驻，点“展开/收起”切换更多条件；右侧固定“搜索(主色)、重置(描边)”；部分日期字段带“近3/7/15/30/60天”快捷按钮。
+(3) 操作工具栏 Toolbar
+位于筛选区下方、表格上方，左对齐排列按钮：主操作（新增，红底白字）+ 次操作（导出、批量动作，白底灰边）；依赖勾选行的批量按钮在未勾选时 disabled 置灰；右侧常有“列表字段”自定义显隐列。
+(4) 数据表格 Table
+el-table，表头白底、40px高、字重600；支持固定首列/操作列、横向滚动、行尾“操作”列放文字按钮（编辑/详情/删除等，红字）；编号类单元格悬浮出省略提示；底部左侧为“合计”行（数值列求和），右侧为分页器（总数、页码、每页条数、前往N页）。
+(5) 状态标签 Tag
+用不同颜色 el-tag 表达状态：未开始/草稿=灰(info)、执行中=蓝或主色、已完成/合格=绿(success)、预警/快逾期=橙(warning)、已逾期/已作废=红(danger)。
+(6) 表单 Form / 弹窗
+label 右对齐、必填项前红色*；控件含 input/select/date-picker/textarea(带0/N字数统计)/upload(附件)/switch；复杂单据用折叠面板(el-collapse)分“基础信息/收货/财务”等区；新增/编辑多为整页路由，少量为 el-dialog 弹窗或 el-drawer 抽屉；删除、作废、反审核等危险动作先弹 ElMessageBox 二次确认。
+(7) 反馈与审批
+操作成功/失败用右上角 ElMessage 轻提示；单据可“查看审批流程/审批记录”；提交后进入待审核，审核/反审核改变状态与可用按钮。
+7.4 典型页面 P1：登录页
+┌────────────────────────────┐
+│        钉铛智造(Logo)       │
+│  [ 请输入企业ID         ]  │
+│  [ 请输入账号           ]  │
+│  [ 请输入密码           ]  │
+│  [ 请输入验证码  ] [验证码图]│
+│  [ 登 录 (红底白字,通栏) ]  │
+└────────────────────────────┘
+字段/列名 | 控件类型 | 必填 | 占位/数据源/取值 | 说明
+企业ID | input | 是 | 请输入企业ID（如100004） | 租户隔离标识
+账号 | input | 是 | 请输入账号 | 
+密码 | password | 是 | 请输入密码 | 密文
+验证码 | input+图片 | 是 | 请输入验证码 | 图形验证码，点击图片可刷新
+登录 | button | — | 提交校验，失败提示 | 四项均必填
+7.5 典型页面 P2：生产工单列表（列表页标准样板）
+┌ 状态Tab: (全部工单)(未开始)(执行中)(快逾期)(已逾期)(已完成)(已作废) ┐
+┌ 筛选: [工单编号] [产品编号/名称]            [搜索][重置] 展开/收起 ┐
+┌ 工具: [新增工单][导出] 批量打印/合并打印/批量领料/开始/删除/结束/完工  列表字段┐
+┌ 表格(35列, 首列复选框, 尾列操作, 可横滚/固定列) ........................┐
+│ □ 工单编号 工单状态 产品名称 ... 领料状态 │ 编辑 复制 开始 详情 删除... │
+├ 合计: 计划数合计/基本数量合计/已入库合计 ... ────────────────────────┤
+└ 共324条   < 1 2 3 ...33 >  每页[10]条  前往[ ]页                      ┘
+筛选项（展开后25+，均为可选条件）：
+工单编号、产品编号/名称、产品规格、产品属性(下拉)、生产类型(下拉)、源单编号、外协状态(下拉)、计划开始~结束(日期范围)、质检状态(下拉)、工序、工序状态(下拉)、紧急状态(下拉)、客户名称/编码、机台状态(下拉)、客户交期(范围)、客户订单编号、入库状态(下拉)、创建人、备注、更新时间(范围)、完工状态(下拉)、负责人、产品分类(下拉)、制单日期(范围)、自选产品。
+表格列定义（35列，顺序）：
+复选框、工单编号、工单状态、产品名称、客户编码、客户名称、客户订单编号、入库状态、产品规格、计划数(辅助数量)、基本单位、辅助单位、基本数量、已入库数量(辅助单位)、生产工序数、外协工序数、外协状态、客户交期、备注、完工状态、完工时间、计划开始时间、计划结束时间、机台状态、制单日期、质检状态、负责人、最近报工工序、最后更新时间、最后更新人、创建人、行销售备注、领料状态、操作。
+行操作—状态矩阵（决定按钮显隐）：
+状态 | 行内操作按钮
+未开始 | 编辑、复制、开始、详情、删除、领料、生成计划、完工
+执行中/快逾期/已逾期 | 复制、撤回、结束、详情、领料、入库、按单代报、完工
+已完工 | 复制、详情
+已完成 | 复制、详情、领料、作废、入库、完工、反完成（或开启、反完成）
+已作废 | 复制、详情、删除、完工
+7.6 典型页面 P3：新增/编辑生产工单（整页表单+明细）
+顶部: [取消]                          [保存]
+▣ 基础资料 ─────────────────────────────────────
+ 工单编号* [  ] 制单日期*[日期] 生产类型[下拉] 部门*[下拉]
+ 项目[下拉] 项目阶段[下拉] 计划开始*[日期] 计划结束*[日期]
+ 紧急程度*[下拉] 是否有工序外协[开关/下拉] 版本号[ ](0/100) 负责人[下拉]
+ 备注[多行文本 0/200]  附件[上传文件]  客户订单编号[ ]
+▣ 产品详情 ─────────────────────────────────────
+ (工序设置|产品信息)Tab  [选择产品][列表字段]
+ 明细表: 产品图|产品名称|产品编号|规格|属性|基本单位|可用库存|基本数量|辅助单位|计划数|操作
+字段/列名 | 控件类型 | 必填 | 占位/数据源/取值 | 说明
+工单编号 | input | 是 | 请输入 | 通常按规则自动生成可改
+制单日期 | date-picker | 是 | 请选择 | 默认当天
+生产类型 | select | 否 | 库存生产/订单生产等 | 
+部门 | select | 是 | 请选择部门 | 组织数据
+项目/项目阶段 | select 联动 | 否 | 先选项目再选阶段 | 级联
+计划开始/结束 | datetime | 是 | 计划起止时间 | 结束须晚于开始
+紧急程度 | select | 是 | 不紧急/普通/紧急/非常紧急 | 
+是否有工序外协 | switch/select | 否 | 无/工序外协/整单外协 | 
+版本号 | input | 否 | ≤100字 | 字数统计
+负责人 | select | 否 | 人员选择 | 
+备注 | textarea | 否 | ≤200字 | 0/200 计数
+附件 | upload | 否 | 拖拽/点击上传 | 多文件
+客户订单编号 | input/选择 | 否 | 关联销售订单 | 
+产品明细 | 子表 | 是(至少1行) | 选择产品带入 | 录入基本数量/计划数
+7.7 典型页面 P4：生产工单详情
+顶部: [编辑][打印记录][打印作业指导书][单据二维码][打印流转卡][赶工一下][入库] 返回
+▣ 基础资料(只读, 2列描述列表): 工单编号/制单日期/生产类型/部门/计划起止/紧急程度/状态/设备...
+▣ 产品详情: 产品图|名称|编号|规格|单位|计划数|待生产|累计良品|已入库|待入库
+▣ 加工物料信息(BOM展开): BOM等级|物料编码/名称/型号/规格|单位用量|计划产出|已生产|待生产|已入库|待入库
+▣ Tab: (报工记录)(关联单据)(工序信息)(操作记录)(物料BOM)
+7.8 典型页面 P5：销售订单新增（多分区主表+明细子表）
+[取消][保存][提交]  ▼基础信息 ▼收货信息 ▼物流信息 ▼联系信息 ▼财务信息 ▼费用及收款信息
+ 基础信息: 销售单号 客户名称* 选择报价单 交货日期 销售专员 客户订单编号 付款方式
+           销售类型 结算期限 发票类型 含税/不含税金额 项目 制单人 附件 备注
+ 收货: 收货人/联系方式/收货地址  物流: 物流名称  财务: 税号/开户行/银行账号
+ 费用收款: 整单折扣额/率 成交金额 收款账号
+▣ 明细: (产品列表|物料列表) [选择产品][客户产品][已售产品][批量填充][历史价格][子件库存][智能交期评估]
+主表字段约45项（见5.4），明细行选择产品后自动带出单价、规格、库存，录入数量后自动计算金额、税额、折扣与成交金额。
+7.9 典型页面 P6：左树右表档案页（以物料档案为例）
+┌ 左:物料分类树 140~200px ┐ ┌ 右:物料列表 ───────────────────────┐
+│ [新增分类][分类导入]    │ │[新增物料][导入][批量修改][批量打印二维码]│
+│ ▼全部                  │ │ 物料图|名称|编码|型号|规格|类别|各单位|单价│
+│  · 手机 (选中)         │ │ |条码|使用状态|序列号|二维码|创建/更新|操作 │
+│  · 纸巾  · 空调 ...    │ │ 行: 复制/编辑/详情/打印二维码/下载序列号   │
+└───────────────────────┘ └────────────────────────────────────┘
+点左侧分类节点过滤右侧列表；分类树支持新增/编辑/导入分类；右侧固定列+横滚，字段可由“列表字段”自定义；产品管理、供应商、客户、设备、工模具等档案同构。
+7.10 典型页面 P7：驾驶舱（看板）
+栅格卡片布局：第一行 KPI 指标卡（9项，数值+标题，可点击下钻）；第二行 快捷菜单+待办（10分类Tab+待审单据表格）；其后为销售/采购实时数据（本日/本月切换）、销售趋势折线、净利润趋势/结构（饼图）、TOP8柱状、在制工单卡片、库存情况；使用 ECharts，卡片白底圆角、间距约12~16px，支持“配置驾驶舱”拖拽显隐。
+八、数据字典、单据编号规则与路由
+8.1 核心状态字典（枚举）
+字段 | 取值（实测/标准） | 对应标签色建议
+工单状态 | 未开始、执行中、快逾期、已逾期、已完成、已作废（另有“已完工”过程态） | 灰/蓝/橙/红/绿/深灰
+完工状态 | 未完工、已完工 | 灰/绿
+入库状态 | 未入库、部分入库、全部入库 | 灰/橙/绿
+领料状态 | 未领料、部分领料、全部领料 | 灰/橙/绿
+质检状态 | 无需质检、未质检、待质检、质检中、合格、不合格 | 灰/蓝/橙/绿/红
+外协状态 | 无工序外协、工序外协、整单外协 | 灰/蓝
+机台状态 | 未关联、已关联 | 灰/绿
+紧急程度 | 不紧急、普通、紧急、非常紧急 | 灰/蓝/橙/红
+审核状态 | 草稿/待提交、待审核、已审核、已反审核、已作废 | 标准审核流
+8.2 单据编号规则（前缀实测）
+前缀 | 单据 | 示例
+SCGD / GD | 生产工单（新/旧规则） | SCGD202608310001
+XSDD | 销售订单 | XSDD202608260002
+CPCK | 产品出库/销售出库单 | CPCK202608260004
+XSTH / XSBHD | 销售退货单 / 销售备货单 | XSTH202608260001
+MRP | MRP计划 | MRP202608210001
+SCLL | 生产领料单 | SCLL202608260008
+WX/GXWX/WXLL | 外协单/工序外协/外协领料 | WX202604280004
+通用规则：单据前缀字母 + yyyyMMdd + 当日4位流水号；销售订单转工单时子单编号为“父单号-序号”（如 XSDD202608210003-00001）。
+8.3 路由与页面清单
+系统采用 hash 路由（#/模块/页面，列表→新增/详情为同级 add/detail，如 #/production/workOrder、/add、/detail?id=）。全部约415个页面的“名称—路由—操作—规模”已在第四章逐模块列出，可直接作为前端路由表与菜单表的数据源。
+九、给前端 / AI 的实现指引
+技术栈：Vue3 + Vite + Element Plus + Vue-Router(hash) + Pinia + ECharts + axios；UI 以 Element 组件为主体，主色覆盖为 #C00000。
+目录建议：layout(顶部/侧栏/页签)、components(ProTable 高级表格、SearchForm 筛选、StatusTag、PageCrud)、views(按14模块建目录)、router(由菜单数据动态生成)、store(tagsView 多页签、user、dict)、api、utils。
+抽象一个 ProTable 页面骨架：状态Tabs + SearchForm(展开收起) + Toolbar(批量按钮联动勾选) + el-table(固定列/列表字段/合计) + 分页；90%列表页用同一骨架，传入 columns 与 actions 配置即可生成。
+抽象一个 CrudForm：用 schema 数组描述字段（name/label/type/required/options/api/规则），自动渲染控件、校验与折叠分区；明细子表用可编辑 el-table。
+多页签：路由变化时在 tagsView 增加页签并 keep-alive 缓存组件，超过20个拦截提示；固定“系统架构/驾驶舱”。
+权限/状态驱动按钮：按单据状态返回可用 action 列表（见状态矩阵），前端用 v-if 控制行按钮与批量按钮禁用。
+Mock：可先用第四章页面清单与第八节字典构造 mock 数据（工单/订单各造20条覆盖各状态），即可独立跑通界面。
+可直接投喂给 AI 的生成提示词：
+请用 Vue3 + Element Plus 实现一个“生产工单列表”页：顶部7个状态Tab(全部/未开始/执行中/快逾期/已逾期/已完成/已作废, 选中#C00000)；
+其下可展开筛选表单(工单编号、产品名称等, 搜索/重置)；工具栏含新增工单(主色)、导出、批量按钮(未勾选禁用)、列表字段；
+主体为带复选框、固定首尾列、可横滚的 el-table，列按文档7.5的35列，状态用彩色 el-tag，行尾操作列按“状态-操作矩阵”显示文字按钮；
+底部为合计行+分页(总数/页码/跳页)。微软雅黑14px、输入框30px直角、按钮32px圆角8px、页面灰底#F8F7F7卡片白底。配套20条mock数据。
+十、页面规模统计
+模块 | 功能页面数
+销售管理 | 39
+采购管理 | 28
+生产管理 | 41
+库存管理 | 55
+质量管理 | 37
+外协管理 | 28
+物料管理 | 9
+财务管理 | 70
+项目管理 | 5
+数据报表 | 29
+人事办公 | 35
+设备管理 | 4
+基础数据 | 35
+合计 | 415
+注：以上页面均为实际登录后逐页访问采集；部分报表页因当前测试数据为空，表格列数显示为0或采用按需加载，其筛选/导出等功能入口均存在。

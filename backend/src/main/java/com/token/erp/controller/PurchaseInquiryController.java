@@ -5,6 +5,7 @@ import com.token.erp.common.Result;
 import com.token.erp.dto.PurchaseInquiryRequest;
 import com.token.erp.entity.PurchaseInquiry;
 import com.token.erp.entity.PurchaseInquiryItem;
+import com.token.erp.entity.PurchaseOrder;
 import com.token.erp.service.PurchaseInquiryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -69,5 +70,14 @@ public class PurchaseInquiryController {
     public Result<Void> unApprove(@Parameter(description = "询价单ID") @RequestParam Long id) {
         inquiryService.unApprove(id);
         return Result.success();
+    }
+
+    @Operation(summary = "比价生单（询价转采购订单）")
+    @PostMapping("/toPurchaseOrder")
+    @PreAuthorize("hasAuthority('purchase:inquiry:create')")
+    public Result<PurchaseOrder> toPurchaseOrder(
+            @Parameter(description = "询价单ID") @RequestParam Long inquiryId,
+            @Parameter(description = "供应商ID（可空，空则自动比价选最低总价）") @RequestParam(required = false) Long supplierId) {
+        return Result.success(inquiryService.toPurchaseOrder(inquiryId, supplierId));
     }
 }

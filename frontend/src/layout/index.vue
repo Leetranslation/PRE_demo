@@ -1,130 +1,57 @@
 <template>
   <el-container class="layout">
-    <el-aside width="220px" class="aside">
+    <el-aside width="92px" class="aside" ref="asideRef">
       <div class="logo">
-        <span class="logo-text">Token 制造</span>
+        <span class="logo-text">Token</span>
       </div>
-      <el-menu
-        :default-active="activeMenu"
-        class="menu"
-        background-color="#1f2430"
-        text-color="#bfcbd9"
-        active-text-color="#ffffff"
-        router
-      >
-        <el-menu-item index="/dashboard">
-          <el-icon><HomeFilled /></el-icon>
-          <span>首页</span>
-        </el-menu-item>
-        <el-sub-menu index="/base">
-          <template #title>
-            <el-icon><Files /></el-icon>
-            <span>基础资料</span>
-          </template>
-          <el-menu-item index="/base/customer">客户档案</el-menu-item>
-          <el-menu-item index="/base/supplier">供应商档案</el-menu-item>
-          <el-menu-item index="/base/material">物料档案</el-menu-item>
-          <el-menu-item index="/base/product">产品档案</el-menu-item>
-          <el-menu-item index="/base/warehouse">仓库</el-menu-item>
-          <el-menu-item index="/base/location">库位管理</el-menu-item>
-          <el-menu-item index="/base/area">库区管理</el-menu-item>
-          <el-menu-item index="/base/bom">BOM 管理</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/produceData">
-          <template #title>
-            <el-icon><Tools /></el-icon>
-            <span>生产数据</span>
-          </template>
-          <el-menu-item index="/produceData/process">工序管理</el-menu-item>
-          <el-menu-item index="/produceData/processRoute">工艺路线</el-menu-item>
-          <el-menu-item index="/produceData/workshop">车间管理</el-menu-item>
-          <el-menu-item index="/produceData/machine">机台设备</el-menu-item>
-          <el-menu-item index="/produceData/workCalendar">工作日历</el-menu-item>
-          <el-menu-item index="/produceData/unit">单位管理</el-menu-item>
-          <el-menu-item index="/produceData/unitConversion">多单位转换率</el-menu-item>
-          <el-menu-item index="/produceData/serialRule">序列号规则</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/sales">
-          <template #title>
-            <el-icon><ShoppingCart /></el-icon>
-            <span>销售管理</span>
-          </template>
-          <el-menu-item index="/sales/order">销售订单</el-menu-item>
-          <el-menu-item index="/sales/quotation">报价单</el-menu-item>
-          <el-menu-item index="/sales/contract">合同管理</el-menu-item>
-          <el-menu-item index="/sales/invoice">销售发票</el-menu-item>
-          <el-menu-item index="/sales/verification">销售核销</el-menu-item>
-          <el-menu-item index="/sales/outbound">销售出库单</el-menu-item>
-          <el-menu-item index="/sales/return">销售退货单</el-menu-item>
-          <el-menu-item index="/sales/afterSale">售后管理</el-menu-item>
-          <el-menu-item index="/sales/stocking">销售备货单</el-menu-item>
-          <el-menu-item index="/sales/designCenter">设计中心</el-menu-item>
-          <el-menu-item index="/sales/packing">装箱单</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/purchase">
-          <template #title>
-            <el-icon><Box /></el-icon>
-            <span>采购管理</span>
-          </template>
-          <el-menu-item index="/purchase/order">采购订单</el-menu-item>
-          <el-menu-item index="/purchase/requisition">采购申请单</el-menu-item>
-          <el-menu-item index="/purchase/inquiry">采购询价单</el-menu-item>
-          <el-menu-item index="/purchase/invoice">采购发票</el-menu-item>
-          <el-menu-item index="/purchase/verification">采购核销</el-menu-item>
-          <el-menu-item index="/purchase/return">采购退货单</el-menu-item>
-          <el-menu-item index="/purchase/inbound">采购入库单</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/production">
-          <template #title>
-            <el-icon><Setting /></el-icon>
-            <span>生产管理</span>
-          </template>
-          <el-menu-item index="/production/order">生产工单</el-menu-item>
-          <el-menu-item index="/production/issue">领料单</el-menu-item>
-          <el-menu-item index="/production/return">退料单</el-menu-item>
-          <el-menu-item index="/production/inbound">生产入库单</el-menu-item>
-          <el-menu-item index="/production/reportWork">报工管理</el-menu-item>
-          <el-menu-item index="/production/auditWork">审工管理</el-menu-item>
-          <el-menu-item index="/production/progressInquiry">工序进度查询</el-menu-item>
-          <el-menu-item index="/production/simpleWorkReport">简易报工</el-menu-item>
-          <el-menu-item index="/production/schedule">生产排产计划</el-menu-item>
-          <el-menu-item index="/production/mps">主生产计划</el-menu-item>
-        </el-sub-menu>
-        <el-menu-item index="/mrp/index">
-          <el-icon><DataAnalysis /></el-icon>
-          <span>MRP 计划</span>
-        </el-menu-item>
-        <el-sub-menu index="/inventory">
-          <template #title>
-            <el-icon><Coin /></el-icon>
-            <span>库存管理</span>
-          </template>
-          <el-menu-item index="/inventory/stock">库存查询</el-menu-item>
-          <el-menu-item index="/inventory/flow">库存流水</el-menu-item>
-          <el-menu-item index="/inventory/warning">库存预警</el-menu-item>
-          <el-menu-item index="/inventory/track">批号/序列号跟踪</el-menu-item>
-          <el-menu-item index="/inventory/reservation">锁库管理</el-menu-item>
-          <el-menu-item index="/inventory/otherStock">其他出入库</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/quality">
-          <template #title>
-            <el-icon><CircleCheck /></el-icon>
-            <span>质量管理</span>
-          </template>
-          <el-menu-item index="/quality/index">质量检验</el-menu-item>
-          <el-menu-item index="/quality/apply">质检申请单</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/system">
-          <template #title>
-            <el-icon><User /></el-icon>
-            <span>系统管理</span>
-          </template>
-          <el-menu-item index="/system/user">用户管理</el-menu-item>
-          <el-menu-item index="/system/role">角色管理</el-menu-item>
-          <el-menu-item index="/system/department">部门管理</el-menu-item>
-        </el-sub-menu>
-      </el-menu>
+      <ul class="top-menu">
+        <li
+          v-for="(m, idx) in topMenus"
+          :key="m.key"
+          :ref="(el) => setItemRef(el, idx)"
+          class="top-menu-item"
+          :class="{ active: isTopActive(m) }"
+          @mouseenter="onTopEnter(m, idx)"
+          @mouseleave="onTopLeave"
+          @click="onTopClick(m)"
+        >
+          <el-icon class="top-icon"><component :is="m.icon" /></el-icon>
+          <span class="top-title">{{ m.title }}</span>
+        </li>
+      </ul>
     </el-aside>
+
+    <!-- 多列浮层（hover 触发） -->
+    <template v-if="flyout.visible && flyout.menu">
+      <div
+        ref="flyoutRef"
+        class="flyout"
+        :style="{ top: flyout.top + 'px', left: flyout.left + 'px' }"
+        @mouseenter="cancelClose"
+        @mouseleave="onTopLeave"
+      >
+        <div class="flyout-columns">
+          <div
+            v-for="(col, ci) in flyout.menu.groups"
+            :key="ci"
+            class="flyout-col"
+          >
+            <div class="flyout-col-title">{{ col.groupTitle }}</div>
+            <ul class="flyout-col-items">
+              <li
+                v-for="it in col.items"
+                :key="it.path"
+                class="flyout-item"
+                :class="{ active: route.path === it.path }"
+                @click="goTo(it.path)"
+              >
+                {{ it.title }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <el-container>
       <el-header class="header">
@@ -159,19 +86,112 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTabsStore } from '@/stores/tabs'
 import TagsView from './TagsView.vue'
+import { topMenus, type TopMenu } from './menuConfig'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const tabsStore = useTabsStore()
+
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title as string)
 const avatarText = computed(() => (userStore.realName || userStore.username || 'A').charAt(0))
+
+// 一级菜单 ref 数组（用于浮层定位）
+const itemRefs = ref<(HTMLElement | null)[]>([])
+function setItemRef(el: any, idx: number) {
+  itemRefs.value[idx] = (el as HTMLElement) ?? null
+}
+
+const asideRef = ref<HTMLElement | null>(null)
+const flyoutRef = ref<HTMLElement | null>(null)
+
+const ASIDE_WIDTH = 92
+
+const flyout = reactive({
+  visible: false,
+  menu: null as TopMenu | null,
+  top: 0,
+  left: ASIDE_WIDTH
+})
+
+let closeTimer: number | null = null
+function cancelClose() {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
+}
+function onTopLeave() {
+  cancelClose()
+  closeTimer = window.setTimeout(() => {
+    flyout.visible = false
+    flyout.menu = null
+  }, 180)
+}
+
+function onTopEnter(m: TopMenu, idx: number) {
+  // 一级直跳（无子菜单）不弹浮层，保留 click 跳转
+  if (!m.groups || m.groups.length === 0) {
+    flyout.visible = false
+    flyout.menu = null
+    cancelClose()
+    return
+  }
+  cancelClose()
+  const el = itemRefs.value[idx]
+  const rect = el?.getBoundingClientRect()
+  flyout.menu = m
+  flyout.top = rect ? rect.top : 60
+  flyout.left = ASIDE_WIDTH
+  flyout.visible = true
+}
+
+function closeFlyout() {
+  cancelClose()
+  flyout.visible = false
+  flyout.menu = null
+}
+
+function onTopClick(m: TopMenu) {
+  // 只有无子菜单的一级（path 直跳）才在 click 时跳转
+  if (m.path && (!m.groups || m.groups.length === 0)) {
+    router.push(m.path)
+    closeFlyout()
+  }
+}
+
+function isTopActive(m: TopMenu) {
+  if (m.path && route.path === m.path) return true
+  if (m.pathPrefix && m.pathPrefix.some((p) => route.path === p || route.path.startsWith(p + '/'))) {
+    return true
+  }
+  if (m.groups) {
+    return m.groups.some((g) => g.items.some((it) => it.path === route.path))
+  }
+  return false
+}
+
+function goTo(path: string) {
+  router.push(path)
+  closeFlyout()
+}
+
+// 点击浮层和左侧菜单之外，关闭浮层（替代全屏遮罩，避免遮挡菜单导致抖动）
+function onDocumentClick(e: MouseEvent) {
+  if (!flyout.visible) return
+  const target = e.target as HTMLElement
+  if (asideRef.value && asideRef.value.contains(target)) return
+  if (flyoutRef.value && flyoutRef.value.contains(target)) return
+  closeFlyout()
+}
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
 
 function handleLogout() {
   userStore.logout()
@@ -188,21 +208,110 @@ function handleLogout() {
   background-color: #1f2430;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 10;
 }
 .logo {
-  height: 60px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.menu {
-  border-right: none;
+.top-menu {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
   flex: 1;
+  overflow-y: auto;
 }
+.top-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 4px;
+  margin: 2px 6px;
+  border-radius: 6px;
+  color: #bfcbd9;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  font-size: 12px;
+  user-select: none;
+}
+.top-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.top-menu-item.active {
+  background-color: #d32f2f;
+  color: #fff;
+}
+.top-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.top-title {
+  line-height: 1.2;
+  text-align: center;
+}
+
+.flyout {
+  position: fixed;
+  z-index: 999;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 16px 20px;
+  min-width: 240px;
+  max-width: 80vw;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  border-top: 3px solid #d32f2f;
+}
+.flyout-columns {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+.flyout-col {
+  min-width: 168px;
+}
+.flyout-col-title {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 10px;
+  font-weight: 600;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #ebeef5;
+}
+.flyout-col-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.flyout-item {
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303133;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+.flyout-item:hover {
+  background-color: #fef0f0;
+  color: #d32f2f;
+}
+.flyout-item.active {
+  color: #d32f2f;
+  font-weight: 600;
+  background-color: #fef0f0;
+}
+
 .header {
   background: #fff;
   display: flex;

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @TableName("production_order")
 public class ProductionOrder extends BaseEntity {
     private String orderNo;
+    private String orderType;
     private Long productId;
     private BigDecimal quantity;
     private String productionType;

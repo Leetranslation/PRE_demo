@@ -250,9 +250,10 @@ public class InventoryService {
                         .eq(Product::getStatus, 1)
                         .eq(Product::getInventoryManage, 1));
         for (Product p : products) {
+            if (p.getMinStock() == null && p.getSafetyStock() == null) continue;
             BigDecimal available = availableQty(p.getId(), "product");
             InventoryWarningVO vo = buildWarning(p.getId(), "product", p.getCode(), p.getName(),
-                    available, null, null);
+                    available, p.getMinStock(), p.getSafetyStock());
             if (vo != null) result.add(vo);
         }
         return result;
@@ -280,7 +281,7 @@ public class InventoryService {
     }
 
     /** 某物料/产品的可用库存合计（跨仓库/库位/批次） */
-    private BigDecimal availableQty(Long itemId, String itemType) {
+    public BigDecimal availableQty(Long itemId, String itemType) {
         List<Inventory> list = inventoryMapper.selectList(
                 new LambdaQueryWrapper<Inventory>()
                         .eq(Inventory::getItemId, itemId)

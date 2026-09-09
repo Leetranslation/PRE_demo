@@ -22,8 +22,9 @@ public class ProductionOrderController {
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long pageSize,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String approveStatus) {
-        return Result.success(PageResult.of(orderService.page(page, pageSize, keyword, approveStatus)));
+            @RequestParam(required = false) String approveStatus,
+            @RequestParam(required = false) String orderType) {
+        return Result.success(PageResult.of(orderService.page(page, pageSize, keyword, approveStatus, orderType)));
     }
 
     @PostMapping("/create")

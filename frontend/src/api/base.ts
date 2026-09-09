@@ -237,3 +237,80 @@ export function bomUpdate(data: any) {
 export function bomItems(bomId: number) {
   return request.get('/base/bom/items', { params: { bomId } }) as Promise<any[]>
 }
+
+// ===== 客户价格资料 =====
+export function customerPriceList(params: ListParams & { customerId?: number; itemType?: string }) {
+  return request.get('/base/customerPrice/list', { params }) as Promise<PageResult<any>>
+}
+export function customerPriceCreate(data: any) {
+  return request.post('/base/customerPrice/create', data)
+}
+export function customerPriceUpdate(data: any) {
+  return request.post('/base/customerPrice/update', data)
+}
+export function customerPriceStatus(id: number, status: number) {
+  return request.post('/base/customerPrice/status', null, { params: { id, status } })
+}
+export function customerPriceDelete(id: number) {
+  return request.post('/base/customerPrice/delete', null, { params: { id } })
+}
+
+// ===== 不良品项 =====
+export function defectList(params: ListParams & { category?: string }) {
+  return request.get('/base/defect/list', { params }) as Promise<PageResult<any>>
+}
+export function defectCreate(data: any) {
+  return request.post('/base/defect/create', data)
+}
+export function defectUpdate(data: any) {
+  return request.post('/base/defect/update', data)
+}
+export function defectStatus(id: number, status: number) {
+  return request.post('/base/defect/status', null, { params: { id, status } })
+}
+export function defectDelete(id: number) {
+  return request.post('/base/defect/delete', null, { params: { id } })
+}
+
+// ===== 质检基础（检验方法/方案） =====
+export function inspectionMethodList(params: ListParams) {
+  return request.get('/quality/base/method/list', { params }) as Promise<PageResult<any>>
+}
+export function inspectionMethodCreate(data: any) {
+  return request.post('/quality/base/method/create', data)
+}
+export function inspectionMethodUpdate(data: any) {
+  return request.post('/quality/base/method/update', data)
+}
+export function inspectionMethodStatus(id: number, status: number) {
+  return request.post('/quality/base/method/status', null, { params: { id, status } })
+}
+export function inspectionSchemeList(params: ListParams & { itemType?: string }) {
+  return request.get('/quality/base/scheme/list', { params }) as Promise<PageResult<any>>
+}
+export function inspectionSchemeCreate(data: any) {
+  return request.post('/quality/base/scheme/create', data)
+}
+export function inspectionSchemeUpdate(data: any) {
+  return request.post('/quality/base/scheme/update', data)
+}
+export function inspectionSchemeStatus(id: number, status: number) {
+  return request.post('/quality/base/scheme/status', null, { params: { id, status } })
+}
+
+// ===== 物料替代料 =====
+export function substituteList(params: ListParams & { materialId?: number }) {
+  return request.get('/base/substitute/list', { params }) as Promise<PageResult<any>>
+}
+export function substituteCreate(data: any) {
+  return request.post('/base/substitute/create', data)
+}
+export function substituteUpdate(data: any) {
+  return request.post('/base/substitute/update', data)
+}
+export function substituteStatus(id: number, status: number) {
+  return request.post('/base/substitute/status', null, { params: { id, status } })
+}
+export function substituteDelete(id: number) {
+  return request.post('/base/substitute/delete', null, { params: { id } })
+}

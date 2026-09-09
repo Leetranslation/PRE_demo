@@ -34,13 +34,19 @@ public class ProductionOrderService {
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
 
-    public Page<ProductionOrder> page(long page, long pageSize, String keyword, String approveStatus) {
+    public Page<ProductionOrder> page(long page, long pageSize, String keyword, String approveStatus, String orderType) {
         LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             qw.like(ProductionOrder::getOrderNo, keyword);
         }
         if (StringUtils.hasText(approveStatus)) {
             qw.eq(ProductionOrder::getApproveStatus, approveStatus);
+        }
+        if (StringUtils.hasText(orderType)) {
+            qw.eq(ProductionOrder::getOrderType, orderType);
+        } else {
+            // 默认只查成品工单，半成品在独立页面查询
+            qw.eq(ProductionOrder::getOrderType, "product");
         }
         qw.orderByDesc(ProductionOrder::getId);
         return orderMapper.selectPage(new Page<>(page, pageSize), qw);
@@ -55,6 +61,7 @@ public class ProductionOrderService {
 
         ProductionOrder order = new ProductionOrder();
         order.setOrderNo(codeGenerator.next("MO"));
+        order.setOrderType(StringUtils.hasText(request.getOrderType()) ? request.getOrderType() : "product");
         order.setProductId(request.getProductId());
         order.setQuantity(request.getQuantity());
         order.setProductionType(StringUtils.hasText(request.getProductionType()) ? request.getProductionType() : "stock");
