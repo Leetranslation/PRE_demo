@@ -8,6 +8,7 @@ import com.token.erp.entity.BomItem;
 import com.token.erp.entity.BomVersion;
 import com.token.erp.service.BomService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/base/bom")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('base:bom')")
 public class BomController {
 
     private final BomService bomService;
@@ -39,11 +41,13 @@ public class BomController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('base:bom:create')")
     public Result<Bom> create(@RequestBody BomRequest request) {
         return Result.success(bomService.create(request));
     }
 
     @PostMapping("/update")
+    @PreAuthorize("hasAuthority('base:bom:update')")
     public Result<Bom> update(@RequestBody BomRequest request) {
         return Result.success(bomService.update(request));
     }

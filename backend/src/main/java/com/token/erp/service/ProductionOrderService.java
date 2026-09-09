@@ -6,10 +6,13 @@ import com.token.erp.common.BizException;
 import com.token.erp.dto.ProductionOrderRequest;
 import com.token.erp.entity.Bom;
 import com.token.erp.entity.BomVersion;
+import com.token.erp.entity.ProcessRoute;
 import com.token.erp.entity.ProductionOrder;
 import com.token.erp.mapper.BomMapper;
 import com.token.erp.mapper.BomVersionMapper;
+import com.token.erp.mapper.ProcessRouteMapper;
 import com.token.erp.mapper.ProductionOrderMapper;
+import com.token.erp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +28,11 @@ public class ProductionOrderService {
     private final ProductionOrderMapper orderMapper;
     private final BomMapper bomMapper;
     private final BomVersionMapper bomVersionMapper;
+    private final ProcessRouteMapper processRouteMapper;
     private final CodeGenerator codeGenerator;
+    private final SysConfigService sysConfigService;
+    private final SecurityUtils securityUtils;
+    private final NotificationService notificationService;
 
     public Page<ProductionOrder> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
@@ -54,11 +61,21 @@ public class ProductionOrderService {
         order.setPlanDate(request.getPlanDate() != null ? request.getPlanDate() : LocalDate.now());
         order.setPlanFinishDate(request.getPlanFinishDate());
         order.setDepartmentId(request.getDepartmentId());
+        order.setWorkshopId(request.getWorkshopId());
+        order.setMachineId(request.getMachineId());
+        order.setProcessRouteId(request.getProcessRouteId());
         order.setOwner(request.getOwner());
+        order.setUrgency(StringUtils.hasText(request.getUrgency()) ? request.getUrgency() : "normal");
+        order.setOutsourceStatus(StringUtils.hasText(request.getOutsourceStatus()) ? request.getOutsourceStatus() : "none");
         order.setSourceType(request.getSourceType());
         order.setSourceId(request.getSourceId());
         order.setApproveStatus("pending");
         order.setBizStatus("pending");
+        order.setFinishStatus("unfinished");
+        order.setInboundStatus("none");
+        order.setIssueStatus("none");
+        order.setQcStatus("not_needed");
+        order.setMachineStatus(request.getMachineId() != null ? "linked" : "unlinked");
         order.setCompletedQty(BigDecimal.ZERO);
         order.setRemark(request.getRemark());
 
@@ -82,6 +99,19 @@ public class ProductionOrderService {
             }
         }
 
+        // 选产品自动带出该产品的有效工艺路线（未手动指定时）
+        if (order.getProcessRouteId() == null) {
+            ProcessRoute route = processRouteMapper.selectOne(
+                    new LambdaQueryWrapper<ProcessRoute>()
+                            .eq(ProcessRoute::getProductId, request.getProductId())
+                            .eq(ProcessRoute::getStatus, 1)
+                            .orderByDesc(ProcessRoute::getId)
+                            .last("LIMIT 1"));
+            if (route != null) {
+                order.setProcessRouteId(route.getId());
+            }
+        }
+
         orderMapper.insert(order);
         return order;
     }
@@ -100,9 +130,26 @@ public class ProductionOrderService {
         ProductionOrder order = orderMapper.selectById(id);
         if (order == null) throw new BizException(404, "生产工单不存在");
         if (!"approving".equals(order.getApproveStatus())) throw new BizException("仅审批中状态可审批");
+        // 禁止自审校验
+        checkSelfApprove(order.getCreateBy());
         order.setApproveStatus("approved");
-        order.setBizStatus("producing");
+        // 状态机升级：审批通过后仍为「未开始」，由「工单开始」动作触发进入「执行中」
+        order.setBizStatus("pending");
         orderMapper.updateById(order);
+        // 通知制单人审批结果
+        notificationService.sendToUsername(order.getCreateBy(), "approve_result",
+                "生产工单已审批", "生产工单 " + order.getOrderNo() + " 已审批通过",
+                "production_order", order.getId());
+    }
+
+    /** 禁止自审校验（配置 allow_self_approve=false 时生效） */
+    private void checkSelfApprove(String createBy) {
+        if (!sysConfigService.getBoolean("allow_self_approve")) {
+            String currentUser = securityUtils.currentUsername();
+            if (createBy != null && createBy.equals(currentUser)) {
+                throw new BizException("禁止自审：不能审批自己提交的单据");
+            }
+        }
     }
 
     @Transactional
@@ -115,6 +162,38 @@ public class ProductionOrderService {
         }
         order.setApproveStatus("pending");
         order.setBizStatus("pending");
+        orderMapper.updateById(order);
+    }
+
+    /** 工单开始：未开始 → 执行中 */
+    @Transactional
+    public void start(Long id) {
+        ProductionOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BizException(404, "生产工单不存在");
+        if (!"pending".equals(order.getBizStatus())) throw new BizException("仅未开始状态的工单可开始");
+        if (!"approved".equals(order.getApproveStatus())) throw new BizException("工单未审批，不能开始");
+        order.setBizStatus("producing");
+        orderMapper.updateById(order);
+    }
+
+    /** 工单完工：执行中 → 已完工 */
+    @Transactional
+    public void finish(Long id) {
+        ProductionOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BizException(404, "生产工单不存在");
+        if (!"producing".equals(order.getBizStatus())) throw new BizException("仅执行中状态的工单可完工");
+        order.setBizStatus("finished");
+        order.setFinishStatus("finished");
+        orderMapper.updateById(order);
+    }
+
+    /** 工单作废 */
+    @Transactional
+    public void voidOrder(Long id) {
+        ProductionOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BizException(404, "生产工单不存在");
+        if ("completed".equals(order.getBizStatus())) throw new BizException("已完成的工单不能作废");
+        order.setBizStatus("voided");
         orderMapper.updateById(order);
     }
 

@@ -4,15 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.token.erp.common.BizException;
 import com.token.erp.entity.Inventory;
+import com.token.erp.entity.QcApply;
 import com.token.erp.entity.QualityInspection;
 import com.token.erp.entity.QualityResult;
+import com.token.erp.mapper.QcApplyMapper;
 import com.token.erp.mapper.QualityInspectionMapper;
 import com.token.erp.mapper.QualityResultMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -22,6 +23,7 @@ public class QualityService {
 
     private final QualityInspectionMapper inspectionMapper;
     private final QualityResultMapper resultMapper;
+    private final QcApplyMapper qcApplyMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
 
@@ -106,6 +108,14 @@ public class QualityService {
             resultMapper.insert(qr);
         } else {
             throw new BizException("非法质检结果");
+        }
+
+        // 回写质检申请单状态（三段式闭环：判定后申请单已检）
+        QcApply apply = qcApplyMapper.selectOne(
+                new LambdaQueryWrapper<QcApply>().eq(QcApply::getInspectionId, inspection.getId()));
+        if (apply != null) {
+            apply.setStatus("finished");
+            qcApplyMapper.updateById(apply);
         }
     }
 }

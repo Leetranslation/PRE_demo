@@ -2,7 +2,7 @@
   <el-card shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="物料/产品ID">
-        <el-input-number v-model="query.itemId" :min="1" placeholder="按ID查询" style="width: 160px" />
+        <el-input v-model="query.itemId" placeholder="按ID查询" clearable style="width: 160px" />
       </el-form-item>
       <el-form-item label="业务类型">
         <el-select v-model="query.bizType" placeholder="全部" clearable style="width: 200px">
@@ -44,7 +44,7 @@
       <el-table-column prop="serialNo" label="序列号" width="130" />
       <el-table-column label="库存类型" width="100">
         <template #default="{ row }">
-          {{ { available: '可用', pending_qc: '待检', unqualified: '不合格' }[row.stockType] || row.stockType }}
+          {{ STOCK_TYPE_TEXT[row.stockType] || row.stockType }}
         </template>
       </el-table-column>
       <el-table-column prop="quantity" label="变动数量" width="110" align="right" />
@@ -67,9 +67,16 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'InventoryFlow' })
 import { reactive, ref } from 'vue'
 import { inventoryTx } from '@/api/inventory'
 import { useExport } from '@/composables/useExport'
+
+const STOCK_TYPE_TEXT: Record<string, string> = {
+  available: '可用',
+  pending_qc: '待检',
+  unqualified: '不合格'
+}
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -98,7 +105,8 @@ function doExport() { handleExport(records.value) }
 async function load() {
   loading.value = true
   try {
-    const res = await inventoryTx(query)
+    const params: any = { ...query, itemId: query.itemId ? Number(query.itemId) : undefined }
+    const res = await inventoryTx(params)
     records.value = res.records
     total.value = res.total
   } finally {

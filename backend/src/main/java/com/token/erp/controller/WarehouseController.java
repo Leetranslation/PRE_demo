@@ -5,11 +5,13 @@ import com.token.erp.common.Result;
 import com.token.erp.entity.Warehouse;
 import com.token.erp.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/base/warehouse")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('base:warehouse')")
 public class WarehouseController {
 
     private final WarehouseService warehouseService;
@@ -24,16 +26,19 @@ public class WarehouseController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('base:warehouse:create')")
     public Result<Warehouse> create(@RequestBody Warehouse warehouse) {
         return Result.success(warehouseService.create(warehouse));
     }
 
     @PostMapping("/update")
+    @PreAuthorize("hasAuthority('base:warehouse:update')")
     public Result<Warehouse> update(@RequestBody Warehouse warehouse) {
         return Result.success(warehouseService.update(warehouse));
     }
 
     @PostMapping("/status")
+    @PreAuthorize("hasAuthority('base:warehouse:update')")
     public Result<Void> status(@RequestParam Long id, @RequestParam Integer status) {
         warehouseService.changeStatus(id, status);
         return Result.success();

@@ -33,6 +33,7 @@ public class ProductionInboundService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final JdbcTemplate jdbcTemplate;
+    private final IdempotencyService idempotencyService;
 
     public Page<ProductionInbound> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<ProductionInbound> qw = new LambdaQueryWrapper<>();
@@ -49,6 +50,8 @@ public class ProductionInboundService {
 
     @Transactional
     public ProductionInbound create(ProductionInboundRequest request) {
+        // 幂等控制：防止重复点击/网络重试导致重复入库
+        idempotencyService.checkAndOccupy(request.getRequestId(), "production_inbound");
         ProductionOrder order = orderMapper.selectById(request.getOrderId());
         if (order == null) throw new BizException(404, "生产工单不存在");
         if (!"approved".equals(order.getApproveStatus())) throw new BizException("仅已审批工单可入库");

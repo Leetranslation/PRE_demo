@@ -7,6 +7,7 @@ import com.token.erp.entity.SalesOrder;
 import com.token.erp.entity.SalesOrderItem;
 import com.token.erp.service.SalesOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/sales/order")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('sales:order')")
 public class SalesOrderController {
 
     private final SalesOrderService orderService;
@@ -33,23 +35,27 @@ public class SalesOrderController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('sales:order:create')")
     public Result<SalesOrder> create(@RequestBody SalesOrderRequest request) {
         return Result.success(orderService.create(request));
     }
 
     @PostMapping("/submit")
+    @PreAuthorize("hasAuthority('sales:order:submit')")
     public Result<Void> submit(@RequestParam Long id) {
         orderService.submit(id);
         return Result.success();
     }
 
     @PostMapping("/approve")
+    @PreAuthorize("hasAuthority('sales:order:approve')")
     public Result<Void> approve(@RequestParam Long id) {
         orderService.approve(id);
         return Result.success();
     }
 
     @PostMapping("/unapprove")
+    @PreAuthorize("hasAuthority('sales:order:approve')")
     public Result<Void> unApprove(@RequestParam Long id) {
         orderService.unApprove(id);
         return Result.success();

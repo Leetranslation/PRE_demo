@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Customer' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { customerList, customerCreate, customerUpdate, customerStatus } from '@/api/base'

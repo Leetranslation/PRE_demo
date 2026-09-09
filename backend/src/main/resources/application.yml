@@ -32,3 +32,10 @@ token-erp:
   jwt:
     secret: "token-erp-secret-key-please-change-in-production-0123456789"
     expire-hours: 24
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  packages-to-scan: com.token.erp.controller

@@ -29,8 +29,8 @@
     <el-form :model="form" label-width="100px">
       <el-form-item label="部门编码" required><el-input v-model="form.code" /></el-form-item>
       <el-form-item label="部门名称" required><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="上级部门ID"><el-input-number v-model="form.parentId" :min="0" style="width: 100%" /></el-form-item>
-      <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" style="width: 100%" /></el-form-item>
+      <el-form-item label="上级部门ID"><el-input v-model="form.parentId" placeholder="上级部门ID" /></el-form-item>
+      <el-form-item label="排序"><el-input v-model="form.sort" placeholder="排序" /></el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
     </el-form>
     <template #footer>
@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SystemDepartment' })
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { departmentList, departmentCreate, departmentUpdate } from '@/api/system'
@@ -85,6 +86,8 @@ function openEdit(row: any) {
 }
 async function handleSave() {
   if (!form.code || !form.name) { ElMessage.warning('请填写编码和名称'); return }
+  form.parentId = Number(form.parentId) || 0
+  form.sort = Number(form.sort) || 0
   if (form.id) await departmentUpdate(form)
   else await departmentCreate(form)
   ElMessage.success('保存成功')

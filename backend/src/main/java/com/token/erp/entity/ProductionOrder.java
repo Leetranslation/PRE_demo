@@ -21,11 +21,21 @@ public class ProductionOrder extends BaseEntity {
     private Long sourceId;
     private LocalDate planFinishDate;
     private Long departmentId;
+    private Long workshopId;
+    private Long machineId;
+    private Long processRouteId;
     private String owner;
     private Long bomId;
     private Long bomVersionId;
     private String approveStatus;
     private String bizStatus;
+    private String finishStatus;
+    private String inboundStatus;
+    private String issueStatus;
+    private String qcStatus;
+    private String machineStatus;
+    private String urgency;
+    private String outsourceStatus;
     private BigDecimal completedQty;
     private String remark;
 }

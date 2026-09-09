@@ -1,0 +1,215 @@
+<template>
+  <el-card shadow="never">
+    <el-form :inline="true" :model="query" class="filter-bar">
+      <el-form-item label="单号">
+        <el-input v-model="query.keyword" placeholder="报价单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
+      </el-form-item>
+      <el-form-item label="审批状态">
+        <el-select v-model="query.approveStatus" placeholder="全部" clearable style="width: 130px">
+          <el-option label="待提交" value="pending" />
+          <el-option label="审批中" value="approving" />
+          <el-option label="已审批" value="approved" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <div class="toolbar">
+      <el-button type="primary" @click="openDialog()">新增报价单</el-button>
+    </div>
+
+    <el-table :data="records" v-loading="loading" border stripe row-key="id">
+      <el-table-column prop="quotationNo" label="报价单号" width="160" />
+      <el-table-column prop="customerId" label="客户ID" width="90" />
+      <el-table-column prop="quoteDate" label="报价日期" width="110" />
+      <el-table-column prop="salesman" label="业务员" width="100" />
+      <el-table-column prop="totalAmount" label="价税合计" width="120" align="right" />
+      <el-table-column label="审批状态" width="100">
+        <template #default="{ row }">
+          <el-tag :type="approveTagType(row.approveStatus)" size="small">{{ approveText(row.approveStatus) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="业务状态" width="100">
+        <template #default="{ row }">
+          <el-tag :type="row.bizStatus === 'converted' ? 'success' : 'info'" size="small">
+            {{ row.bizStatus === 'converted' ? '已转单' : '未转单' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="220" fixed="right">
+        <template #default="{ row }">
+          <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="submit(row)">提交</el-button>
+          <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="approve(row)">审批</el-button>
+          <el-button v-if="row.approveStatus === 'approved' && row.bizStatus !== 'converted'" link type="warning" @click="convert(row)">转销售订单</el-button>
+          <el-button v-if="row.approveStatus === 'approved'" link type="danger" @click="unapprove(row)">反审核</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      class="pagination"
+      v-model:current-page="query.page"
+      v-model:page-size="query.pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      @size-change="load"
+      @current-change="load"
+    />
+  </el-card>
+
+  <el-dialog v-model="dialogVisible" title="新增报价单" width="760px">
+    <el-form :model="form" label-width="100px">
+      <el-row :gutter="12">
+        <el-col :span="12">
+          <el-form-item label="客户" required>
+            <el-select v-model="form.customerId" filterable remote :remote-method="searchCustomer" :loading="customerLoading" placeholder="搜索客户" clearable style="width: 100%">
+              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="业务员"><el-input v-model="form.salesman" /></el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="有效期至">
+            <el-date-picker v-model="form.validUntil" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="24">
+          <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
+        </el-col>
+      </el-row>
+    </el-form>
+
+    <el-divider content-position="left">报价明细</el-divider>
+    <div class="item-toolbar">
+      <el-button type="primary" size="small" @click="productPickerVisible = true">添加产品</el-button>
+    </div>
+    <el-table :data="form.items" border size="small">
+      <el-table-column prop="productName" label="产品" min-width="160" />
+      <el-table-column label="数量" width="120">
+        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
+      </el-table-column>
+      <el-table-column label="含税单价" width="130">
+        <template #default="{ row }"><el-input v-model="row.price" type="number" size="small" /></template>
+      </el-table-column>
+      <el-table-column label="税率%" width="100">
+        <template #default="{ row }"><el-input v-model="row.taxRate" type="number" size="small" /></template>
+      </el-table-column>
+      <el-table-column label="操作" width="70">
+        <template #default="{ $index }">
+          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <template #footer>
+      <el-button @click="dialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleSave">保存</el-button>
+    </template>
+  </el-dialog>
+
+  <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
+</template>
+
+<script setup lang="ts">
+defineOptions({ name: 'Quotation' })
+import { reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { quotationList, quotationCreate, quotationSubmit, quotationApprove, quotationUnapprove, quotationConvert } from '@/api/sales'
+import { customerList } from '@/api/base'
+import ProductPicker from '@/components/ProductPicker.vue'
+
+const loading = ref(false)
+const records = ref<any[]>([])
+const total = ref(0)
+const dialogVisible = ref(false)
+const productPickerVisible = ref(false)
+const customers = ref<any[]>([])
+const customerLoading = ref(false)
+const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
+const form = reactive<any>({ items: [] })
+
+function approveText(v: string) { return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v }
+function approveTagType(v: string) { return { pending: 'info', approving: 'warning', approved: 'success' }[v] || 'info' }
+
+async function searchCustomer(keyword: string) {
+  customerLoading.value = true
+  try {
+    const res = await customerList({ page: 1, pageSize: 20, keyword, status: 1 })
+    customers.value = res.records
+  } finally {
+    customerLoading.value = false
+  }
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await quotationList(query)
+    records.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() { query.page = 1; load() }
+function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
+
+function openDialog() {
+  Object.keys(form).forEach((k) => delete form[k])
+  form.items = []
+  searchCustomer('')
+  dialogVisible.value = true
+}
+
+function onProductSelect(product: any) {
+  form.items.push({ productId: product.id, productName: `${product.code} ${product.name}`, quantity: 1, price: 0, taxRate: 13 })
+}
+
+async function handleSave() {
+  if (!form.customerId) { ElMessage.warning('请选择客户'); return }
+  if (!form.items || form.items.length === 0) { ElMessage.warning('请添加报价明细'); return }
+  const payload = {
+    customerId: form.customerId,
+    validUntil: form.validUntil,
+    salesman: form.salesman,
+    remark: form.remark,
+    items: form.items.map((i: any) => ({
+      productId: i.productId, spec: i.spec, unit: i.unit,
+      quantity: Number(i.quantity), price: Number(i.price), taxRate: Number(i.taxRate), remark: i.remark
+    }))
+  }
+  await quotationCreate(payload)
+  ElMessage.success('保存成功')
+  dialogVisible.value = false
+  load()
+}
+
+async function submit(row: any) { await quotationSubmit(row.id); ElMessage.success('已提交'); load() }
+async function approve(row: any) { await quotationApprove(row.id); ElMessage.success('审批通过'); load() }
+async function unapprove(row: any) {
+  await ElMessageBox.confirm('确定反审核该报价单吗？', '提示', { type: 'warning' })
+  await quotationUnapprove(row.id); ElMessage.success('已反审核'); load()
+}
+async function convert(row: any) {
+  await ElMessageBox.confirm('确定将该报价单转为销售订单吗？', '提示', { type: 'warning' })
+  const res = await quotationConvert(row.id)
+  ElMessage.success('已生成销售订单：' + (res as any).data?.orderNo || '')
+  load()
+}
+
+load()
+</script>
+
+<style scoped>
+.filter-bar { margin-bottom: 8px; }
+.toolbar { margin-bottom: 12px; }
+.item-toolbar { margin-bottom: 8px; }
+.pagination { margin-top: 12px; justify-content: flex-end; }
+</style>

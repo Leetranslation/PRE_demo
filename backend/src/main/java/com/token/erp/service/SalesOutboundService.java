@@ -30,6 +30,7 @@ public class SalesOutboundService {
     private final SalesOrderItemMapper orderItemMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
+    private final IdempotencyService idempotencyService;
 
     public Page<SalesOutbound> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<SalesOutbound> qw = new LambdaQueryWrapper<>();
@@ -46,6 +47,8 @@ public class SalesOutboundService {
 
     @Transactional
     public SalesOutbound create(SalesOutboundRequest request) {
+        // 幂等控制：防止重复点击/网络重试导致重复出库
+        idempotencyService.checkAndOccupy(request.getRequestId(), "sales_outbound");
         SalesOrder order = orderMapper.selectById(request.getOrderId());
         if (order == null) throw new BizException(404, "销售订单不存在");
         if (!"approved".equals(order.getApproveStatus())) throw new BizException("仅已审批订单可出库");

@@ -2,7 +2,7 @@
   <el-card shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="物料/产品ID">
-        <el-input-number v-model="query.itemId" :min="1" placeholder="按ID查询" style="width: 160px" />
+        <el-input v-model="query.itemId" placeholder="按ID查询" clearable style="width: 160px" />
       </el-form-item>
       <el-form-item label="类型">
         <el-select v-model="query.itemType" placeholder="全部" clearable style="width: 120px">
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'InventoryStock' })
 import { reactive, ref } from 'vue'
 import { inventoryList } from '@/api/inventory'
 import { useExport } from '@/composables/useExport'
@@ -98,7 +99,8 @@ function doExport() { handleExport(records.value) }
 async function load() {
   loading.value = true
   try {
-    const res = await inventoryList(query)
+    const params: any = { ...query, itemId: query.itemId ? Number(query.itemId) : undefined }
+    const res = await inventoryList(params)
     records.value = res.records
     total.value = res.total
   } finally {

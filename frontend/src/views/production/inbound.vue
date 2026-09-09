@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'ProductionInbound' })
 import { ref } from 'vue'
 import DocList from '@/components/DocList.vue'
 import { productionInboundList } from '@/api/production'

@@ -8,6 +8,7 @@ import com.token.erp.entity.SalesOrder;
 import com.token.erp.entity.SalesOrderItem;
 import com.token.erp.mapper.SalesOrderItemMapper;
 import com.token.erp.mapper.SalesOrderMapper;
+import com.token.erp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,9 @@ public class SalesOrderService {
     private final SalesOrderMapper orderMapper;
     private final SalesOrderItemMapper itemMapper;
     private final CodeGenerator codeGenerator;
+    private final SysConfigService sysConfigService;
+    private final SecurityUtils securityUtils;
+    private final NotificationService notificationService;
 
     public Page<SalesOrder> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<SalesOrder> qw = new LambdaQueryWrapper<>();
@@ -83,8 +87,24 @@ public class SalesOrderService {
         SalesOrder order = orderMapper.selectById(id);
         if (order == null) throw new BizException(404, "销售订单不存在");
         if (!"approving".equals(order.getApproveStatus())) throw new BizException("仅审批中状态可审批");
+        // 禁止自审校验：配置禁止自审时，制单人不能审批自己的单
+        checkSelfApprove(order.getCreateBy());
         order.setApproveStatus("approved");
         orderMapper.updateById(order);
+        // 通知制单人审批结果
+        notificationService.sendToUsername(order.getCreateBy(), "approve_result",
+                "销售订单已审批", "销售订单 " + order.getOrderNo() + " 已审批通过",
+                "sales_order", order.getId());
+    }
+
+    /** 禁止自审校验（配置 allow_self_approve=false 时生效） */
+    private void checkSelfApprove(String createBy) {
+        if (!sysConfigService.getBoolean("allow_self_approve")) {
+            String currentUser = securityUtils.currentUsername();
+            if (createBy != null && createBy.equals(currentUser)) {
+                throw new BizException("禁止自审：不能审批自己提交的单据");
+            }
+        }
     }
 
     @Transactional
@@ -107,6 +127,10 @@ public class SalesOrderService {
             BigDecimal qty = item.getQuantity() == null ? BigDecimal.ZERO : item.getQuantity();
             BigDecimal price = item.getPrice() == null ? BigDecimal.ZERO : item.getPrice();
             BigDecimal taxRate = item.getTaxRate() == null ? new BigDecimal("13") : item.getTaxRate();
+            // 数量必须大于0，单价、税率不能为负
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new BizException("数量必须大于0");
+            if (price.compareTo(BigDecimal.ZERO) < 0) throw new BizException("单价不能为负数");
+            if (taxRate.compareTo(BigDecimal.ZERO) < 0) throw new BizException("税率不能为负数");
 
             BigDecimal totalAmount = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
             BigDecimal divisor = BigDecimal.ONE.add(taxRate.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP));

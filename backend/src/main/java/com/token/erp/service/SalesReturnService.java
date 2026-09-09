@@ -1,38 +1,89 @@
 package com.token.erp.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.token.erp.common.BizException;
 import com.token.erp.dto.SalesReturnRequest;
 import com.token.erp.entity.Inventory;
 import com.token.erp.entity.SalesOrder;
+import com.token.erp.entity.SalesReturn;
+import com.token.erp.entity.SalesReturnItem;
 import com.token.erp.mapper.SalesOrderMapper;
+import com.token.erp.mapper.SalesReturnItemMapper;
+import com.token.erp.mapper.SalesReturnMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 /**
- * 销售退货服务：退货增加库存（入库方向）
+ * 销售退货服务：客户退货，库存【入库】(in)
  */
 @Service
 @RequiredArgsConstructor
 public class SalesReturnService {
 
+    private final SalesReturnMapper returnMapper;
+    private final SalesReturnItemMapper returnItemMapper;
     private final SalesOrderMapper orderMapper;
     private final InventoryService inventoryService;
+    private final CodeGenerator codeGenerator;
+    private final IdempotencyService idempotencyService;
+
+    public Page<SalesReturn> page(long page, long pageSize, Long orderId) {
+        LambdaQueryWrapper<SalesReturn> qw = new LambdaQueryWrapper<>();
+        if (orderId != null) qw.eq(SalesReturn::getOrderId, orderId);
+        qw.orderByDesc(SalesReturn::getId);
+        return returnMapper.selectPage(new Page<>(page, pageSize), qw);
+    }
+
+    public List<SalesReturnItem> items(Long returnId) {
+        return returnItemMapper.selectList(
+                new LambdaQueryWrapper<SalesReturnItem>().eq(SalesReturnItem::getReturnId, returnId));
+    }
 
     @Transactional
-    public void create(SalesReturnRequest request) {
+    public SalesReturn create(SalesReturnRequest request) {
+        idempotencyService.checkAndOccupy(request.getOrderId() + "_" + System.currentTimeMillis(), "sales_return");
         SalesOrder order = orderMapper.selectById(request.getOrderId());
         if (order == null) throw new BizException(404, "销售订单不存在");
-        if (!"approved".equals(order.getApproveStatus())) throw new BizException("仅已审批订单可退货");
-        if (request.getQuantity() == null || request.getQuantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new BizException("退货数量必须大于0");
-        }
+        if (request.getItems() == null || request.getItems().isEmpty()) throw new BizException("退货明细不能为空");
 
-        Inventory dim = new Inventory();
-        dim.setItemId(request.getProductId());
-        dim.setItemType("product");
-        dim.setWarehouseId(request.getWarehouseId());
-        dim.setStockType("available");
-        inventoryService.change(dim, "in", request.getQuantity(), "sales_return", order.getId(), order.getOrderNo());
+        SalesReturn sr = new SalesReturn();
+        sr.setReturnNo(codeGenerator.next("TH"));
+        sr.setOrderId(request.getOrderId());
+        sr.setCustomerId(order.getCustomerId());
+        sr.setWarehouseId(request.getWarehouseId());
+        sr.setReturnDate(LocalDate.now());
+        sr.setStatus("completed");
+        sr.setRemark(request.getRemark());
+        returnMapper.insert(sr);
+
+        for (SalesReturnRequest.Item item : request.getItems()) {
+            if (item.getProductId() == null) throw new BizException("产品不能为空");
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BizException("退货数量必须大于0");
+            }
+
+            // 销售退货 = 库存入库（in）
+            Inventory dim = new Inventory();
+            dim.setItemId(item.getProductId());
+            dim.setItemType("product");
+            dim.setWarehouseId(request.getWarehouseId());
+            dim.setStockType("available");
+            inventoryService.change(dim, "in", item.getQuantity(), "sales_return", sr.getId(), sr.getReturnNo());
+
+            SalesReturnItem ri = new SalesReturnItem();
+            ri.setReturnId(sr.getId());
+            ri.setProductId(item.getProductId());
+            ri.setQuantity(item.getQuantity());
+            ri.setUnit(item.getUnit());
+            ri.setRemark(item.getRemark());
+            returnItemMapper.insert(ri);
+        }
+        return sr;
     }
 }

@@ -63,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Mrp' })
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mrpCalculate, mrpPlans, mrpRequirements, mrpConfirm } from '@/api/mrp'

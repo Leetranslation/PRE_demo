@@ -33,6 +33,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String username = claims.get("username", String.class);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    // 用户已停用：不放行，旧 token 立即失效
+                    if (!userDetails.isEnabled()) {
+                        chain.doFilter(request, response);
+                        return;
+                    }
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(auth);

@@ -73,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Supplier' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { supplierList, supplierCreate, supplierUpdate, supplierStatus } from '@/api/base'

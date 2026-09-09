@@ -10,6 +10,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'MaterialReturn' })
 import { ref } from 'vue'
 import DocList from '@/components/DocList.vue'
 import { materialReturnList, materialReturnItems } from '@/api/production'

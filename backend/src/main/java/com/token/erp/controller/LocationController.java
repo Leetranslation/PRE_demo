@@ -5,6 +5,7 @@ import com.token.erp.common.Result;
 import com.token.erp.entity.Location;
 import com.token.erp.service.LocationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/base/location")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('base:location')")
 public class LocationController {
 
     private final LocationService locationService;
@@ -31,11 +33,13 @@ public class LocationController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('base:location:create')")
     public Result<Location> create(@RequestBody Location location) {
         return Result.success(locationService.create(location));
     }
 
     @PostMapping("/update")
+    @PreAuthorize("hasAuthority('base:location:update')")
     public Result<Location> update(@RequestBody Location location) {
         return Result.success(locationService.update(location));
     }

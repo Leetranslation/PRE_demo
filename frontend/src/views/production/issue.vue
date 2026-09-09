@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'MaterialIssue' })
 import { ref } from 'vue'
 import DocList from '@/components/DocList.vue'
 import { materialIssueList, materialIssueItems } from '@/api/production'

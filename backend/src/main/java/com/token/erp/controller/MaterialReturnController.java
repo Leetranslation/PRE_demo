@@ -7,6 +7,7 @@ import com.token.erp.entity.MaterialReturn;
 import com.token.erp.entity.MaterialReturnItem;
 import com.token.erp.service.MaterialReturnService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/production/return")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('production:return')")
 public class MaterialReturnController {
 
     private final MaterialReturnService returnService;
@@ -32,6 +34,7 @@ public class MaterialReturnController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('production:return:create')")
     public Result<MaterialReturn> create(@RequestBody MaterialReturnRequest request) {
         return Result.success(returnService.create(request));
     }

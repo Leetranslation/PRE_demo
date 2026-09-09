@@ -6,11 +6,13 @@ import com.token.erp.dto.PurchaseInboundRequest;
 import com.token.erp.entity.PurchaseInbound;
 import com.token.erp.service.PurchaseInboundService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/purchase/inbound")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('purchase:inbound')")
 public class PurchaseInboundController {
 
     private final PurchaseInboundService inboundService;
@@ -29,6 +31,7 @@ public class PurchaseInboundController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('purchase:inbound:create')")
     public Result<PurchaseInbound> create(@RequestBody PurchaseInboundRequest request) {
         return Result.success(inboundService.create(request));
     }

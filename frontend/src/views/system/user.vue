@@ -58,7 +58,7 @@
       <el-form-item label="姓名"><el-input v-model="form.realName" /></el-form-item>
       <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
       <el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item>
-      <el-form-item label="部门ID"><el-input-number v-model="form.departmentId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="部门ID"><el-input v-model="form.departmentId" placeholder="部门ID" /></el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
@@ -79,6 +79,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SystemUser' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userList, userCreate, userUpdate, userResetPassword, userStatus, userRoles, userAssignRoles, roleList } from '@/api/system'
@@ -132,6 +133,9 @@ function openEdit(row: any) {
 async function handleSave() {
   if (!form.username) { ElMessage.warning('请填写用户名'); return }
   if (!form.id && !form.password) { ElMessage.warning('请填写密码'); return }
+  if (form.departmentId !== undefined && form.departmentId !== null && form.departmentId !== '') {
+    form.departmentId = Number(form.departmentId)
+  }
   if (form.id) await userUpdate(form)
   else await userCreate(form)
   ElMessage.success('保存成功')

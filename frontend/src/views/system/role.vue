@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SystemRole' })
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { roleList, roleCreate, roleUpdate, rolePermissions, roleAssign, permissionList } from '@/api/system'

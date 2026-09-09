@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 public class ProductionInboundRequest {
+    private String requestId;
     private Long orderId;
     private Long warehouseId;
     private LocalDate inboundDate;

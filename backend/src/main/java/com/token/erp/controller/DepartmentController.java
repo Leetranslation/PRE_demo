@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/system/department")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('system:department')")
 public class DepartmentController {
 
     private final DepartmentService departmentService;

@@ -25,5 +25,6 @@ public class PurchaseOrder extends BaseEntity {
     private String approveStatus;
     private String bizStatus;
     private BigDecimal totalAmount;
+    private BigDecimal invoicedAmount;
     private String remark;
 }

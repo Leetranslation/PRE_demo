@@ -3,7 +3,7 @@
     <!-- 待办卡片 -->
     <el-row :gutter="16">
       <el-col :span="4" v-for="card in todoCards" :key="card.title">
-        <el-card class="stat-card" shadow="hover">
+        <el-card class="stat-card" shadow="hover" @click="goTo(card.path)">
           <div class="stat-title">{{ card.title }}</div>
           <div class="stat-value">{{ card.value }}</div>
         </el-card>
@@ -45,8 +45,12 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Dashboard' })
 import { reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { dashboardStats } from '@/api/dashboard'
+
+const router = useRouter()
 
 const stats = reactive<any>({
   pendingSalesApprove: 0, pendingPurchaseApprove: 0, pendingProductionApprove: 0,
@@ -56,12 +60,16 @@ const stats = reactive<any>({
 })
 
 const todoCards = computed(() => [
-  { title: '待审批销售单', value: stats.pendingSalesApprove },
-  { title: '待审批采购单', value: stats.pendingPurchaseApprove },
-  { title: '待审批生产工单', value: stats.pendingProductionApprove },
-  { title: '待入库采购单', value: stats.pendingInbound },
-  { title: '待出库销售单', value: stats.pendingOutbound }
+  { title: '待审批销售单', value: stats.pendingSalesApprove, path: '/sales/order' },
+  { title: '待审批采购单', value: stats.pendingPurchaseApprove, path: '/purchase/order' },
+  { title: '待审批生产工单', value: stats.pendingProductionApprove, path: '/production/order' },
+  { title: '待入库采购单', value: stats.pendingInbound, path: '/purchase/order' },
+  { title: '待出库销售单', value: stats.pendingOutbound, path: '/sales/order' }
 ])
+
+function goTo(path: string) {
+  router.push(path)
+}
 
 const baseCards = computed(() => [
   { title: '客户', value: stats.customerCount },
@@ -79,7 +87,8 @@ onMounted(load)
 </script>
 
 <style scoped>
-.stat-card { margin-bottom: 16px; }
+.stat-card { margin-bottom: 16px; cursor: pointer; }
+.stat-card:hover { border-color: #d32f2f; }
 .stat-title { font-size: 13px; color: #666; }
 .stat-value { font-size: 26px; font-weight: bold; color: #d32f2f; margin-top: 8px; }
 .section { margin-top: 16px; }

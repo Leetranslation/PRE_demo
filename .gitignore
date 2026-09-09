@@ -28,3 +28,7 @@ startup_err.log
 # Env
 .env
 .env.local
+
+# Temp (docx extraction)
+docs/.tmp_docx/
+.tmp_docx/

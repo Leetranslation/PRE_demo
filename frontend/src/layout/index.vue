@@ -27,7 +27,22 @@
           <el-menu-item index="/base/product">产品档案</el-menu-item>
           <el-menu-item index="/base/warehouse">仓库</el-menu-item>
           <el-menu-item index="/base/location">库位管理</el-menu-item>
+          <el-menu-item index="/base/area">库区管理</el-menu-item>
           <el-menu-item index="/base/bom">BOM 管理</el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="/produceData">
+          <template #title>
+            <el-icon><Tools /></el-icon>
+            <span>生产数据</span>
+          </template>
+          <el-menu-item index="/produceData/process">工序管理</el-menu-item>
+          <el-menu-item index="/produceData/processRoute">工艺路线</el-menu-item>
+          <el-menu-item index="/produceData/workshop">车间管理</el-menu-item>
+          <el-menu-item index="/produceData/machine">机台设备</el-menu-item>
+          <el-menu-item index="/produceData/workCalendar">工作日历</el-menu-item>
+          <el-menu-item index="/produceData/unit">单位管理</el-menu-item>
+          <el-menu-item index="/produceData/unitConversion">多单位转换率</el-menu-item>
+          <el-menu-item index="/produceData/serialRule">序列号规则</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/sales">
           <template #title>
@@ -35,8 +50,16 @@
             <span>销售管理</span>
           </template>
           <el-menu-item index="/sales/order">销售订单</el-menu-item>
+          <el-menu-item index="/sales/quotation">报价单</el-menu-item>
+          <el-menu-item index="/sales/contract">合同管理</el-menu-item>
+          <el-menu-item index="/sales/invoice">销售发票</el-menu-item>
+          <el-menu-item index="/sales/verification">销售核销</el-menu-item>
           <el-menu-item index="/sales/outbound">销售出库单</el-menu-item>
           <el-menu-item index="/sales/return">销售退货单</el-menu-item>
+          <el-menu-item index="/sales/afterSale">售后管理</el-menu-item>
+          <el-menu-item index="/sales/stocking">销售备货单</el-menu-item>
+          <el-menu-item index="/sales/designCenter">设计中心</el-menu-item>
+          <el-menu-item index="/sales/packing">装箱单</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/purchase">
           <template #title>
@@ -44,6 +67,11 @@
             <span>采购管理</span>
           </template>
           <el-menu-item index="/purchase/order">采购订单</el-menu-item>
+          <el-menu-item index="/purchase/requisition">采购申请单</el-menu-item>
+          <el-menu-item index="/purchase/inquiry">采购询价单</el-menu-item>
+          <el-menu-item index="/purchase/invoice">采购发票</el-menu-item>
+          <el-menu-item index="/purchase/verification">采购核销</el-menu-item>
+          <el-menu-item index="/purchase/return">采购退货单</el-menu-item>
           <el-menu-item index="/purchase/inbound">采购入库单</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/production">
@@ -55,6 +83,12 @@
           <el-menu-item index="/production/issue">领料单</el-menu-item>
           <el-menu-item index="/production/return">退料单</el-menu-item>
           <el-menu-item index="/production/inbound">生产入库单</el-menu-item>
+          <el-menu-item index="/production/reportWork">报工管理</el-menu-item>
+          <el-menu-item index="/production/auditWork">审工管理</el-menu-item>
+          <el-menu-item index="/production/progressInquiry">工序进度查询</el-menu-item>
+          <el-menu-item index="/production/simpleWorkReport">简易报工</el-menu-item>
+          <el-menu-item index="/production/schedule">生产排产计划</el-menu-item>
+          <el-menu-item index="/production/mps">主生产计划</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/mrp/index">
           <el-icon><DataAnalysis /></el-icon>
@@ -67,11 +101,19 @@
           </template>
           <el-menu-item index="/inventory/stock">库存查询</el-menu-item>
           <el-menu-item index="/inventory/flow">库存流水</el-menu-item>
+          <el-menu-item index="/inventory/warning">库存预警</el-menu-item>
+          <el-menu-item index="/inventory/track">批号/序列号跟踪</el-menu-item>
+          <el-menu-item index="/inventory/reservation">锁库管理</el-menu-item>
+          <el-menu-item index="/inventory/otherStock">其他出入库</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/quality/index">
-          <el-icon><CircleCheck /></el-icon>
-          <span>质量管理</span>
-        </el-menu-item>
+        <el-sub-menu index="/quality">
+          <template #title>
+            <el-icon><CircleCheck /></el-icon>
+            <span>质量管理</span>
+          </template>
+          <el-menu-item index="/quality/index">质量检验</el-menu-item>
+          <el-menu-item index="/quality/apply">质检申请单</el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="/system">
           <template #title>
             <el-icon><User /></el-icon>
@@ -104,8 +146,13 @@
           </el-dropdown>
         </div>
       </el-header>
+      <TagsView />
       <el-main class="main">
-        <router-view />
+        <router-view v-slot="{ Component, route: currentRoute }">
+          <keep-alive :include="tabsStore.cachedNames">
+            <component :is="Component" :key="currentRoute.path" />
+          </keep-alive>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>
@@ -115,16 +162,20 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useTabsStore } from '@/stores/tabs'
+import TagsView from './TagsView.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const tabsStore = useTabsStore()
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title as string)
 const avatarText = computed(() => (userStore.realName || userStore.username || 'A').charAt(0))
 
 function handleLogout() {
   userStore.logout()
+  tabsStore.reset()
   router.push('/login')
 }
 </script>

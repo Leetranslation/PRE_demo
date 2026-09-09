@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 public class MaterialIssueRequest {
+    private String requestId;
     private Long orderId;
     private Long warehouseId;
     private LocalDate issueDate;

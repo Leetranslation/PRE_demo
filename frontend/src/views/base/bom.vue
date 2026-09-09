@@ -87,7 +87,7 @@
       </el-table-column>
       <el-table-column label="数量" width="130">
         <template #default="{ row }">
-          <el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width: 100%" />
+          <el-input v-model="row.quantity" size="small" placeholder="数量" />
         </template>
       </el-table-column>
       <el-table-column label="单位" width="90">
@@ -97,7 +97,7 @@
       </el-table-column>
       <el-table-column label="损耗率" width="130">
         <template #default="{ row }">
-          <el-input-number v-model="row.lossRate" :min="0" :precision="6" size="small" style="width: 100%" />
+          <el-input v-model="row.lossRate" size="small" placeholder="损耗率" />
         </template>
       </el-table-column>
       <el-table-column label="工序" width="120">
@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Bom' })
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { bomList, bomCreate, bomItems } from '@/api/base'
@@ -244,10 +245,13 @@ async function handleSave() {
       ElMessage.warning('存在未选择子项的明细行')
       return
     }
-    if (!item.quantity || item.quantity <= 0) {
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) {
       ElMessage.warning('存在数量未填或为0的明细行')
       return
     }
+    item.quantity = qty
+    item.lossRate = Number(item.lossRate) || 0
   }
   await bomCreate(form)
   ElMessage.success('保存成功')

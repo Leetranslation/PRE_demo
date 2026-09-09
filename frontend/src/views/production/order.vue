@@ -26,6 +26,12 @@
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="工单号" width="170" />
       <el-table-column prop="productId" label="产品ID" width="90" />
+      <el-table-column label="车间" width="110">
+        <template #default="{ row }">{{ workshopName(row.workshopId) }}</template>
+      </el-table-column>
+      <el-table-column label="机台" width="110">
+        <template #default="{ row }">{{ machineName(row.machineId) }}</template>
+      </el-table-column>
       <el-table-column prop="quantity" label="生产数量" width="110" align="right" />
       <el-table-column prop="completedQty" label="已完成" width="110" align="right" />
       <el-table-column label="审批状态" width="100">
@@ -44,6 +50,7 @@
           <el-button v-if="row.approveStatus === 'approved'" link type="primary" @click="openIssue(row)">领料</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="warning" @click="openReturn(row)">退料</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="success" @click="openInbound(row)">入库</el-button>
+          <el-button v-if="row.approveStatus === 'approved' && (row.bizStatus === 'pending' || row.bizStatus === 'producing')" link type="danger" @click="handleUnapprove(row)">反审核</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -70,7 +77,7 @@
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item label="生产数量" required><el-input-number v-model="form.quantity" :min="1" :precision="6" style="width: 100%" /></el-form-item>
+      <el-form-item label="生产数量" required><el-input v-model="form.quantity" placeholder="生产数量" /></el-form-item>
       <el-form-item label="生产类型">
         <el-select v-model="form.productionType" style="width: 100%">
           <el-option label="订单生产" value="order" />
@@ -79,6 +86,19 @@
         </el-select>
       </el-form-item>
       <el-form-item label="计划生产日期"><el-date-picker v-model="form.planDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item>
+      <el-form-item label="车间">
+        <el-select v-model="form.workshopId" placeholder="请选择车间" clearable filterable style="width: 100%" @change="onWorkshopChange">
+          <el-option v-for="w in workshops" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="机台">
+        <el-select v-model="form.machineId" placeholder="请选择机台" clearable filterable :disabled="!form.workshopId" style="width: 100%">
+          <el-option v-for="m in machines" :key="m.id" :label="m.name" :value="m.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="工艺路线">
+        <el-input :model-value="form.processRouteName || '自动带出'" placeholder="选产品后自动带出" readonly style="width: 100%" />
+      </el-form-item>
       <el-form-item label="负责人"><el-input v-model="form.owner" /></el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
     </el-form>
@@ -110,7 +130,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
       <el-table-column label="批次号" width="140"><template #default="{ row }"><el-input v-model="row.batchNo" size="small" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="issueForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -142,7 +162,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="returnForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
     <template #footer>
@@ -173,7 +193,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="140"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="inboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
     <template #footer>
@@ -188,16 +208,17 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'ProductionOrder' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   productionOrderList, productionOrderCreate, productionOrderSubmit,
-  productionOrderApprove, materialIssueCreate, materialReturnCreate, productionInboundCreate
+  productionOrderApprove, productionOrderUnapprove, materialIssueCreate, materialReturnCreate, productionInboundCreate
 } from '@/api/production'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
 import { useExport } from '@/composables/useExport'
-import { warehouseList } from '@/api/base'
+import { warehouseList, workshopList, machineList } from '@/api/base'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -224,6 +245,48 @@ const isMainProduct = ref(false)
 // 仓库下拉
 const warehouses = ref<any[]>([])
 const warehouseLoading = ref(false)
+
+// 车间/机台下拉（表单用，机台按车间过滤）
+const workshops = ref<any[]>([])
+const machines = ref<any[]>([])
+// 全量车间/机台（列表显示名称映射用）
+const allWorkshops = ref<any[]>([])
+const allMachines = ref<any[]>([])
+
+async function loadWorkshops() {
+  const res = await workshopList({ page: 1, pageSize: 100, status: 1 })
+  workshops.value = res.records
+}
+
+async function loadMachines(workshopId?: number) {
+  const res = await machineList({ page: 1, pageSize: 100, status: 1, workshopId })
+  machines.value = res.records
+}
+
+async function loadAllWorkshops() {
+  const res = await workshopList({ page: 1, pageSize: 200 })
+  allWorkshops.value = res.records
+}
+
+async function loadAllMachines() {
+  const res = await machineList({ page: 1, pageSize: 200 })
+  allMachines.value = res.records
+}
+
+function onWorkshopChange(workshopId?: number) {
+  form.machineId = undefined
+  loadMachines(workshopId)
+}
+
+function workshopName(id?: number) {
+  const w = allWorkshops.value.find((x) => x.id === id)
+  return w ? w.name : ''
+}
+
+function machineName(id?: number) {
+  const m = allMachines.value.find((x) => x.id === id)
+  return m ? m.name : ''
+}
 
 async function searchWarehouse(keyword: string) {
   warehouseLoading.value = true
@@ -301,6 +364,9 @@ async function load() {
   } finally {
     loading.value = false
   }
+  // 加载全量车间/机台用于列表显示名称
+  loadAllWorkshops()
+  loadAllMachines()
 }
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
@@ -308,10 +374,14 @@ function handleReset() { query.keyword = ''; query.approveStatus = undefined; qu
 function openCreate() {
   Object.keys(form).forEach((k) => delete form[k])
   form.productionType = 'stock'
+  loadWorkshops()
+  machines.value = []
   createVisible.value = true
 }
 async function handleCreate() {
-  if (!form.productId || !form.quantity) { ElMessage.warning('请填写产品和数量'); return }
+  const qty = Number(form.quantity)
+  if (!form.productId || !qty) { ElMessage.warning('请填写产品和数量'); return }
+  form.quantity = qty
   await productionOrderCreate(form)
   ElMessage.success('保存成功')
   createVisible.value = false
@@ -330,6 +400,13 @@ async function handleApprove(row: any) {
   load()
 }
 
+async function handleUnapprove(row: any) {
+  await ElMessageBox.confirm('确定反审核该工单吗？反审核后将回到待提交状态。', '提示', { type: 'warning' })
+  await productionOrderUnapprove(row.id)
+  ElMessage.success('已反审核')
+  load()
+}
+
 function openIssue(row: any) {
   issueForm.orderId = row.id
   issueForm.warehouseId = undefined
@@ -342,7 +419,11 @@ async function handleIssue() {
   if (!issueForm.warehouseId || !issueForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
   for (const item of issueForm.items) {
     if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
   }
+  issueForm.requestId = crypto.randomUUID()
   await materialIssueCreate(issueForm)
   ElMessage.success('领料成功')
   issueVisible.value = false
@@ -361,7 +442,11 @@ async function handleReturn() {
   if (!returnForm.warehouseId || !returnForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
   for (const item of returnForm.items) {
     if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
   }
+  returnForm.requestId = crypto.randomUUID()
   await materialReturnCreate(returnForm)
   ElMessage.success('退料成功')
   returnVisible.value = false
@@ -380,7 +465,11 @@ async function handleInbound() {
   if (!inboundForm.warehouseId || !inboundForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
   for (const item of inboundForm.items) {
     if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
   }
+  inboundForm.requestId = crypto.randomUUID()
   await productionInboundCreate(inboundForm)
   ElMessage.success('入库成功')
   inboundVisible.value = false

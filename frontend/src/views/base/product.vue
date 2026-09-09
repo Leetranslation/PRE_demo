@@ -74,7 +74,7 @@
         <el-switch v-model="form.productionQc" :active-value="1" :inactive-value="0" />
       </el-form-item>
       <el-form-item label="生产提前期(天)">
-        <el-input-number v-model="form.productionLeadDays" :min="0" style="width: 100%" />
+        <el-input v-model="form.productionLeadDays" placeholder="生产提前期(天)" />
       </el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
     </el-form>
@@ -86,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Product' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { productList, productCreate, productUpdate, productStatus } from '@/api/base'
@@ -140,6 +141,7 @@ async function handleSave() {
     ElMessage.warning('请填写名称、分类和单位')
     return
   }
+  form.productionLeadDays = Number(form.productionLeadDays) || 0
   if (form.id) await productUpdate(form)
   else await productCreate(form)
   ElMessage.success('保存成功')

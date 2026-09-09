@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Warehouse' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { warehouseList, warehouseCreate, warehouseUpdate, warehouseStatus } from '@/api/base'

@@ -6,11 +6,13 @@ import com.token.erp.dto.ProductionInboundRequest;
 import com.token.erp.entity.ProductionInbound;
 import com.token.erp.service.ProductionInboundService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/production/inbound")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('production:inbound')")
 public class ProductionInboundController {
 
     private final ProductionInboundService inboundService;
@@ -29,6 +31,7 @@ public class ProductionInboundController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('production:inbound:create')")
     public Result<ProductionInbound> create(@RequestBody ProductionInboundRequest request) {
         return Result.success(inboundService.create(request));
     }

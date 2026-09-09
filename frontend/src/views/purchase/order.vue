@@ -106,13 +106,13 @@
         </template>
       </el-table-column>
       <el-table-column label="数量" width="120">
-        <template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width: 100%" /></template>
+        <template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template>
       </el-table-column>
       <el-table-column label="含税单价" width="130">
-        <template #default="{ row }"><el-input-number v-model="row.price" :min="0" :precision="6" size="small" style="width: 100%" /></template>
+        <template #default="{ row }"><el-input v-model="row.price" size="small" placeholder="单价" /></template>
       </el-table-column>
       <el-table-column label="税率%" width="100">
-        <template #default="{ row }"><el-input-number v-model="row.taxRate" :min="0" :precision="2" size="small" style="width: 100%" /></template>
+        <template #default="{ row }"><el-input v-model="row.taxRate" size="small" placeholder="税率" /></template>
       </el-table-column>
       <el-table-column label="单位" width="90">
         <template #default="{ row }">{{ row.unit }}</template>
@@ -166,7 +166,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="130"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="130"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
       <el-table-column label="批次号" width="140"><template #default="{ row }"><el-input v-model="row.batchNo" size="small" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="inboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
@@ -181,6 +181,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'PurchaseOrder' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -283,8 +284,11 @@ async function handleInbound() {
   }
   for (const item of inboundForm.items) {
     if (!item.materialId) { ElMessage.warning('存在未选择物料的明细行'); return }
-    if (!item.quantity || item.quantity <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
   }
+  inboundForm.requestId = crypto.randomUUID()
   await purchaseInboundCreate(inboundForm)
   ElMessage.success('入库成功')
   inboundVisible.value = false
@@ -344,10 +348,15 @@ async function handleSave() {
       ElMessage.warning('存在未选择物料的明细行')
       return
     }
-    if (!item.quantity || item.quantity <= 0) {
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) {
       ElMessage.warning('存在数量未填或为0的明细行')
       return
     }
+    // 统一转为数字类型，保证后端接收正确
+    item.quantity = qty
+    item.price = Number(item.price) || 0
+    item.taxRate = Number(item.taxRate) || 0
   }
   await purchaseOrderCreate(form)
   ElMessage.success('保存成功')

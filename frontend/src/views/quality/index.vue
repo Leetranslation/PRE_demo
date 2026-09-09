@@ -52,10 +52,16 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Quality' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { qualityList, qualityJudge } from '@/api/purchase'
 import { useExport } from '@/composables/useExport'
+
+const RESULT_TEXT: Record<string, string> = {
+  qualified: '合格',
+  unqualified: '不合格'
+}
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -69,7 +75,7 @@ const { selection, onSelectionChange, handleExport } = useExport(
     { prop: 'warehouseId', label: '仓库ID' },
     { prop: 'quantity', label: '质检数量' },
     { prop: 'inspectionDate', label: '质检日期' },
-    { prop: 'result', label: '结果', formatter: (row: any) => ({ qualified: '合格', unqualified: '不合格' }[row.result] || '待判定') }
+    { prop: 'result', label: '结果', formatter: (row: any) => RESULT_TEXT[row.result] || '待判定' }
   ],
   '质检单'
 )

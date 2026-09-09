@@ -1,0 +1,149 @@
+<template>
+  <el-card shadow="never">
+    <el-form :inline="true" :model="query" class="filter-bar">
+      <el-form-item label="单号">
+        <el-input v-model="query.keyword" placeholder="核销单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
+      </el-form-item>
+      <el-form-item label="审批状态">
+        <el-select v-model="query.approveStatus" placeholder="全部" clearable style="width: 130px">
+          <el-option label="待提交" value="pending" />
+          <el-option label="审批中" value="approving" />
+          <el-option label="已审批" value="approved" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <div class="toolbar">
+      <el-button type="primary" @click="openDialog()">新增核销</el-button>
+    </div>
+
+    <el-table :data="records" v-loading="loading" border stripe row-key="id">
+      <el-table-column prop="verificationNo" label="核销单号" width="160" />
+      <el-table-column prop="invoiceId" label="发票ID" width="90" />
+      <el-table-column prop="amount" label="核销金额" width="120" align="right" />
+      <el-table-column prop="verifyDate" label="核销日期" width="110" />
+      <el-table-column label="审批状态" width="100">
+        <template #default="{ row }">
+          <el-tag :type="approveTagType(row.approveStatus)" size="small">{{ approveText(row.approveStatus) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="200" fixed="right">
+        <template #default="{ row }">
+          <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="submit(row)">提交</el-button>
+          <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="approve(row)">审批</el-button>
+          <el-button v-if="row.approveStatus === 'approved'" link type="danger" @click="unapprove(row)">反审核</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      class="pagination"
+      v-model:current-page="query.page"
+      v-model:page-size="query.pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      @size-change="load"
+      @current-change="load"
+    />
+  </el-card>
+
+  <el-dialog v-model="dialogVisible" title="新增销售核销" width="520px">
+    <el-form :model="form" label-width="110px">
+      <el-form-item label="销售发票" required>
+        <el-select v-model="form.invoiceId" placeholder="请选择发票" filterable style="width: 100%" @change="onInvoiceChange">
+          <el-option v-for="inv in invoices" :key="inv.id" :label="inv.invoiceNo" :value="inv.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="可核销金额">
+        <el-input :model-value="availableAmount" readonly />
+      </el-form-item>
+      <el-form-item label="核销金额" required>
+        <el-input v-model="form.amount" type="number" placeholder="不超过可核销金额" />
+      </el-form-item>
+      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="dialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleSave">保存</el-button>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup lang="ts">
+defineOptions({ name: 'SalesVerification' })
+import { reactive, ref, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { salesVerificationList, salesVerificationCreate, salesVerificationSubmit, salesVerificationApprove, salesVerificationUnapprove, salesInvoiceList } from '@/api/sales'
+
+const loading = ref(false)
+const records = ref<any[]>([])
+const total = ref(0)
+const dialogVisible = ref(false)
+const invoices = ref<any[]>([])
+const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
+const form = reactive<any>({})
+
+const availableAmount = computed(() => {
+  const inv = invoices.value.find((x) => x.id === form.invoiceId)
+  if (!inv) return ''
+  return (Number(inv.amount || 0) - Number(inv.verifiedAmount || 0)).toFixed(2)
+})
+
+function approveText(v: string) { return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v }
+function approveTagType(v: string) { return { pending: 'info', approving: 'warning', approved: 'success' }[v] || 'info' }
+
+async function loadInvoices() {
+  const res = await salesInvoiceList({ page: 1, pageSize: 200 })
+  invoices.value = res.records.filter((i: any) => i.approveStatus === 'approved' && Number(i.verifiedAmount || 0) < Number(i.amount || 0))
+}
+
+function onInvoiceChange() {}
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await salesVerificationList(query)
+    records.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() { query.page = 1; load() }
+function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
+
+function openDialog() {
+  Object.keys(form).forEach((k) => delete form[k])
+  loadInvoices()
+  dialogVisible.value = true
+}
+
+async function handleSave() {
+  if (!form.invoiceId || form.amount == null) { ElMessage.warning('请选择发票并填写核销金额'); return }
+  await salesVerificationCreate({ invoiceId: form.invoiceId, amount: Number(form.amount), remark: form.remark })
+  ElMessage.success('保存成功')
+  dialogVisible.value = false
+  load()
+}
+
+async function submit(row: any) { await salesVerificationSubmit(row.id); ElMessage.success('已提交'); load() }
+async function approve(row: any) { await salesVerificationApprove(row.id); ElMessage.success('审批通过'); load() }
+async function unapprove(row: any) {
+  await ElMessageBox.confirm('确定反审核该核销单吗？', '提示', { type: 'warning' })
+  await salesVerificationUnapprove(row.id); ElMessage.success('已反审核'); load()
+}
+
+load()
+</script>
+
+<style scoped>
+.filter-bar { margin-bottom: 8px; }
+.toolbar { margin-bottom: 12px; }
+.pagination { margin-top: 12px; justify-content: flex-end; }
+</style>

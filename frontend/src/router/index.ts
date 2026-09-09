@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useTabsStore } from '@/stores/tabs'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -61,6 +62,60 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/base/location.vue'),
         meta: { title: '库位管理' }
       },
+      {
+        path: 'produceData/process',
+        name: 'Process',
+        component: () => import('@/views/base/process.vue'),
+        meta: { title: '工序管理' }
+      },
+      {
+        path: 'produceData/processRoute',
+        name: 'ProcessRoute',
+        component: () => import('@/views/base/processRoute.vue'),
+        meta: { title: '工艺路线' }
+      },
+      {
+        path: 'produceData/workshop',
+        name: 'Workshop',
+        component: () => import('@/views/base/workshop.vue'),
+        meta: { title: '车间管理' }
+      },
+      {
+        path: 'produceData/machine',
+        name: 'Machine',
+        component: () => import('@/views/base/machine.vue'),
+        meta: { title: '机台设备' }
+      },
+      {
+        path: 'produceData/workCalendar',
+        name: 'WorkCalendar',
+        component: () => import('@/views/base/workCalendar.vue'),
+        meta: { title: '工作日历' }
+      },
+      {
+        path: 'produceData/unit',
+        name: 'Unit',
+        component: () => import('@/views/base/unit.vue'),
+        meta: { title: '单位管理' }
+      },
+      {
+        path: 'produceData/unitConversion',
+        name: 'UnitConversion',
+        component: () => import('@/views/base/unitConversion.vue'),
+        meta: { title: '多单位转换率' }
+      },
+      {
+        path: 'produceData/serialRule',
+        name: 'SerialRule',
+        component: () => import('@/views/base/serialRule.vue'),
+        meta: { title: '序列号规则' }
+      },
+      {
+        path: 'base/area',
+        name: 'Area',
+        component: () => import('@/views/base/area.vue'),
+        meta: { title: '库区管理' }
+      },
       // ===== 库存 =====
       {
         path: 'inventory/stock',
@@ -73,6 +128,30 @@ const routes: RouteRecordRaw[] = [
         name: 'InventoryFlow',
         component: () => import('@/views/inventory/flow.vue'),
         meta: { title: '库存流水' }
+      },
+      {
+        path: 'inventory/warning',
+        name: 'InventoryWarning',
+        component: () => import('@/views/inventory/warning.vue'),
+        meta: { title: '库存预警' }
+      },
+      {
+        path: 'inventory/track',
+        name: 'InventoryTrack',
+        component: () => import('@/views/inventory/track.vue'),
+        meta: { title: '批号/序列号跟踪' }
+      },
+      {
+        path: 'inventory/reservation',
+        name: 'InventoryReservation',
+        component: () => import('@/views/inventory/reservation.vue'),
+        meta: { title: '锁库管理' }
+      },
+      {
+        path: 'inventory/otherStock',
+        name: 'OtherStock',
+        component: () => import('@/views/inventory/otherStock.vue'),
+        meta: { title: '其他出入库' }
       },
       // ===== MRP =====
       {
@@ -87,6 +166,54 @@ const routes: RouteRecordRaw[] = [
         name: 'SalesOrder',
         component: () => import('@/views/sales/order.vue'),
         meta: { title: '销售订单' }
+      },
+      {
+        path: 'sales/quotation',
+        name: 'Quotation',
+        component: () => import('@/views/sales/quotation.vue'),
+        meta: { title: '报价单' }
+      },
+      {
+        path: 'sales/contract',
+        name: 'Contract',
+        component: () => import('@/views/sales/contract.vue'),
+        meta: { title: '合同管理' }
+      },
+      {
+        path: 'sales/invoice',
+        name: 'SalesInvoice',
+        component: () => import('@/views/sales/invoice.vue'),
+        meta: { title: '销售发票' }
+      },
+      {
+        path: 'sales/verification',
+        name: 'SalesVerification',
+        component: () => import('@/views/sales/verification.vue'),
+        meta: { title: '销售核销' }
+      },
+      {
+        path: 'sales/afterSale',
+        name: 'AfterSale',
+        component: () => import('@/views/sales/afterSale.vue'),
+        meta: { title: '售后管理' }
+      },
+      {
+        path: 'sales/stocking',
+        name: 'SalesStocking',
+        component: () => import('@/views/sales/stocking.vue'),
+        meta: { title: '销售备货单' }
+      },
+      {
+        path: 'sales/designCenter',
+        name: 'DesignCenter',
+        component: () => import('@/views/sales/designCenter.vue'),
+        meta: { title: '设计中心' }
+      },
+      {
+        path: 'sales/packing',
+        name: 'Packing',
+        component: () => import('@/views/sales/packing.vue'),
+        meta: { title: '装箱单' }
       },
       {
         path: 'sales/outbound',
@@ -106,6 +233,36 @@ const routes: RouteRecordRaw[] = [
         name: 'PurchaseOrder',
         component: () => import('@/views/purchase/order.vue'),
         meta: { title: '采购订单' }
+      },
+      {
+        path: 'purchase/requisition',
+        name: 'PurchaseRequisition',
+        component: () => import('@/views/purchase/requisition.vue'),
+        meta: { title: '采购申请单' }
+      },
+      {
+        path: 'purchase/inquiry',
+        name: 'PurchaseInquiry',
+        component: () => import('@/views/purchase/inquiry.vue'),
+        meta: { title: '采购询价单' }
+      },
+      {
+        path: 'purchase/invoice',
+        name: 'PurchaseInvoice',
+        component: () => import('@/views/purchase/invoice.vue'),
+        meta: { title: '采购发票' }
+      },
+      {
+        path: 'purchase/verification',
+        name: 'PurchaseVerification',
+        component: () => import('@/views/purchase/verification.vue'),
+        meta: { title: '采购核销' }
+      },
+      {
+        path: 'purchase/return',
+        name: 'PurchaseReturn',
+        component: () => import('@/views/purchase/return.vue'),
+        meta: { title: '采购退货单' }
       },
       {
         path: 'purchase/inbound',
@@ -138,12 +295,54 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/production/inbound.vue'),
         meta: { title: '生产入库单' }
       },
+      {
+        path: 'production/reportWork',
+        name: 'ReportWork',
+        component: () => import('@/views/production/reportWork.vue'),
+        meta: { title: '报工管理' }
+      },
+      {
+        path: 'production/auditWork',
+        name: 'AuditWork',
+        component: () => import('@/views/production/auditWork.vue'),
+        meta: { title: '审工管理' }
+      },
+      {
+        path: 'production/progressInquiry',
+        name: 'ProgressInquiry',
+        component: () => import('@/views/production/progressInquiry.vue'),
+        meta: { title: '工序进度查询' }
+      },
+      {
+        path: 'production/simpleWorkReport',
+        name: 'SimpleWorkReport',
+        component: () => import('@/views/production/simpleWorkReport.vue'),
+        meta: { title: '简易报工' }
+      },
+      {
+        path: 'production/schedule',
+        name: 'Schedule',
+        component: () => import('@/views/production/schedule.vue'),
+        meta: { title: '生产排产计划' }
+      },
+      {
+        path: 'production/mps',
+        name: 'Mps',
+        component: () => import('@/views/production/mps.vue'),
+        meta: { title: '主生产计划' }
+      },
       // ===== 质量 =====
       {
         path: 'quality/index',
         name: 'Quality',
         component: () => import('@/views/quality/index.vue'),
         meta: { title: '质量检验' }
+      },
+      {
+        path: 'quality/apply',
+        name: 'QcApply',
+        component: () => import('@/views/quality/apply.vue'),
+        meta: { title: '质检申请单' }
       },
       // ===== 系统管理 =====
       {
@@ -173,20 +372,35 @@ const router = createRouter({
   routes
 })
 
-// 登录守卫
+// 登录守卫 + 标签上限拦截
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
   if (to.path !== '/login' && !token) {
     next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/dashboard')
-  } else {
-    next()
+    return
   }
+  if (to.path === '/login' && token) {
+    next('/dashboard')
+    return
+  }
+  // 标签上限拦截：达到上限且目标为新标签时，阻止跳转
+  const tabsStore = useTabsStore()
+  tabsStore.initAffix()
+  if (!tabsStore.hasTab(to.path) && tabsStore.isFull()) {
+    next(false)
+    return
+  }
+  next()
 })
 
 router.afterEach((to) => {
   document.title = `${to.meta.title ?? ''} - Token 制造`
+  // 非登录页：自动登记/复用标签（首页固定）
+  if (to.path !== '/login') {
+    const tabsStore = useTabsStore()
+    tabsStore.initAffix()
+    tabsStore.addTab(to)
+  }
 })
 
 export default router

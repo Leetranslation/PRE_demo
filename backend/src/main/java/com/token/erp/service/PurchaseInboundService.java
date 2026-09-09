@@ -24,6 +24,7 @@ public class PurchaseInboundService {
     private final MaterialMapper materialMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
+    private final IdempotencyService idempotencyService;
 
     public Page<PurchaseInbound> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<PurchaseInbound> qw = new LambdaQueryWrapper<>();
@@ -44,6 +45,8 @@ public class PurchaseInboundService {
      */
     @Transactional
     public PurchaseInbound create(PurchaseInboundRequest request) {
+        // 幂等控制：防止重复点击/网络重试导致重复入库
+        idempotencyService.checkAndOccupy(request.getRequestId(), "purchase_inbound");
         PurchaseOrder order = orderMapper.selectById(request.getOrderId());
         if (order == null) throw new BizException(404, "采购订单不存在");
         if (!"approved".equals(order.getApproveStatus())) {

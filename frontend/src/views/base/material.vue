@@ -98,10 +98,10 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="安全库存"><el-input-number v-model="form.safetyStock" :min="0" :precision="6" style="width: 100%" /></el-form-item>
+          <el-form-item label="安全库存"><el-input v-model="form.safetyStock" placeholder="安全库存" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="采购提前期(天)"><el-input-number v-model="form.purchaseLeadDays" :min="0" style="width: 100%" /></el-form-item>
+          <el-form-item label="采购提前期(天)"><el-input v-model="form.purchaseLeadDays" placeholder="采购提前期(天)" /></el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="采购质检">
@@ -126,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Material' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { materialList, materialCreate, materialUpdate, materialStatus } from '@/api/base'
@@ -192,6 +193,8 @@ async function handleSave() {
     ElMessage.warning('请填写名称、分类和单位')
     return
   }
+  form.safetyStock = Number(form.safetyStock) || 0
+  form.purchaseLeadDays = Number(form.purchaseLeadDays) || 0
   if (form.id) {
     await materialUpdate(form)
   } else {

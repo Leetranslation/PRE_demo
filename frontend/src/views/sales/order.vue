@@ -43,6 +43,7 @@
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="primary" @click="openOutbound(row)">出库</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="warning" @click="openReturn(row)">退货</el-button>
+          <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'pending_outbound'" link type="warning" @click="handleUnapprove(row)">反审核</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
         </template>
       </el-table-column>
@@ -97,9 +98,9 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="120"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
-      <el-table-column label="含税单价" width="130"><template #default="{ row }"><el-input-number v-model="row.price" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
-      <el-table-column label="税率%" width="100"><template #default="{ row }"><el-input-number v-model="row.taxRate" :min="0" :precision="2" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="120"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
+      <el-table-column label="含税单价" width="130"><template #default="{ row }"><el-input v-model="row.price" size="small" placeholder="单价" /></template></el-table-column>
+      <el-table-column label="税率%" width="100"><template #default="{ row }"><el-input v-model="row.taxRate" size="small" placeholder="税率" /></template></el-table-column>
       <el-table-column label="单位" width="90"><template #default="{ row }">{{ row.unit }}</template></el-table-column>
       <el-table-column label="价税合计" width="110" align="right"><template #default="{ row }">{{ ((row.quantity||0)*(row.price||0)).toFixed(2) }}</template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="form.items.splice($index,1)">删除</el-button></template></el-table-column>
@@ -132,7 +133,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="数量" width="130"><template #default="{ row }"><el-input-number v-model="row.quantity" :min="0" :precision="6" size="small" style="width:100%" /></template></el-table-column>
+      <el-table-column label="数量" width="130"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="outboundForm.items.splice($index,1)">删除</el-button></template></el-table-column>
     </el-table>
     <template #footer>
@@ -156,7 +157,7 @@
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item label="退货数量" required><el-input-number v-model="returnForm.quantity" :min="0" :precision="6" style="width: 100%" /></el-form-item>
+      <el-form-item label="退货数量" required><el-input v-model="returnForm.quantity" placeholder="退货数量" /></el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="returnVisible = false">取消</el-button>
@@ -182,11 +183,12 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SalesOrder' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   salesOrderList, salesOrderItems, salesOrderCreate, salesOrderSubmit,
-  salesOrderApprove, salesOutboundCreate, salesReturnCreate
+  salesOrderApprove, salesOrderUnapprove, salesOutboundCreate, salesReturnCreate
 } from '@/api/sales'
 import { customerList, warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
@@ -308,7 +310,11 @@ async function handleCreate() {
   if (!form.items.length) { ElMessage.warning('请至少添加一条明细'); return }
   for (const item of form.items) {
     if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
-    if (!item.quantity || item.quantity <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
+    item.price = Number(item.price) || 0
+    item.taxRate = Number(item.taxRate) || 0
   }
   await salesOrderCreate(form)
   ElMessage.success('保存成功')
@@ -328,6 +334,13 @@ async function handleApprove(row: any) {
   load()
 }
 
+async function handleUnapprove(row: any) {
+  await ElMessageBox.confirm('确定反审核该订单吗？反审核后将回到待提交状态。', '提示', { type: 'warning' })
+  await salesOrderUnapprove(row.id)
+  ElMessage.success('已反审核')
+  load()
+}
+
 function openOutbound(row: any) {
   outboundForm.orderId = row.id
   outboundForm.warehouseId = undefined
@@ -340,7 +353,11 @@ async function handleOutbound() {
   if (!outboundForm.warehouseId || !outboundForm.items.length) { ElMessage.warning('请填写仓库和明细'); return }
   for (const item of outboundForm.items) {
     if (!item.productId) { ElMessage.warning('存在未选择产品的明细行'); return }
+    const qty = Number(item.quantity)
+    if (!qty || qty <= 0) { ElMessage.warning('存在数量未填或为0的明细行'); return }
+    item.quantity = qty
   }
+  outboundForm.requestId = crypto.randomUUID()
   await salesOutboundCreate(outboundForm)
   ElMessage.success('出库成功')
   outboundVisible.value = false
@@ -357,7 +374,10 @@ function openReturn(row: any) {
   returnVisible.value = true
 }
 async function handleReturn() {
-  if (!returnForm.warehouseId || !returnForm.productId || !returnForm.quantity) { ElMessage.warning('请填写完整'); return }
+  const qty = Number(returnForm.quantity)
+  if (!returnForm.warehouseId || !returnForm.productId || !qty) { ElMessage.warning('请填写完整'); return }
+  returnForm.quantity = qty
+  returnForm.requestId = crypto.randomUUID()
   await salesReturnCreate(returnForm)
   ElMessage.success('退货成功')
   returnVisible.value = false

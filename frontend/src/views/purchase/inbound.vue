@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'PurchaseInbound' })
 import { ref } from 'vue'
 import DocList from '@/components/DocList.vue'
 import { purchaseInboundList } from '@/api/purchase'

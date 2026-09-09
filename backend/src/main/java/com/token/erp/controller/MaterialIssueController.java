@@ -8,6 +8,7 @@ import com.token.erp.entity.MaterialIssue;
 import com.token.erp.entity.MaterialIssueItem;
 import com.token.erp.service.MaterialIssueService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/production/issue")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('production:issue')")
 public class MaterialIssueController {
 
     private final MaterialIssueService issueService;
@@ -33,6 +35,7 @@ public class MaterialIssueController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('production:issue:create')")
     public Result<MaterialIssue> create(@RequestBody MaterialIssueRequest request) {
         return Result.success(issueService.create(request));
     }

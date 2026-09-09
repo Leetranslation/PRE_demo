@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Location' })
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { locationList, locationCreate, locationUpdate } from '@/api/inventory'
