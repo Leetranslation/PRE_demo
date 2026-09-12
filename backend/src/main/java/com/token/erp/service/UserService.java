@@ -37,7 +37,7 @@ public class UserService {
     @Transactional
     public User create(User user) {
         if (!StringUtils.hasText(user.getUsername())) throw new BizException("用户名不能为空");
-        if (!StringUtils.hasText(user.getPassword())) throw new BizException("密码不能为空");
+        validatePassword(user.getPassword());
         // 检查用户名唯一
         Long count = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getUsername, user.getUsername()));
@@ -62,9 +62,15 @@ public class UserService {
     public void resetPassword(Long id, String newPassword) {
         User user = userMapper.selectById(id);
         if (user == null) throw new BizException(404, "用户不存在");
-        if (!StringUtils.hasText(newPassword)) throw new BizException("密码不能为空");
+        validatePassword(newPassword);
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
+    }
+
+    /** 密码复杂度校验：长度至少 6 位 */
+    private void validatePassword(String password) {
+        if (!StringUtils.hasText(password)) throw new BizException("密码不能为空");
+        if (password.length() < 6) throw new BizException("密码长度至少 6 位");
     }
 
     /** 启用/停用 */

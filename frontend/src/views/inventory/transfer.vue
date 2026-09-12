@@ -153,6 +153,7 @@ async function handleSave() {
   if (!form.sourceWarehouseId || !form.targetWarehouseId) { ElMessage.warning('请选择源仓库和目标仓库'); return }
   if (!form.items || form.items.length === 0) { ElMessage.warning('请添加明细'); return }
   await transferCreate({
+    requestId: crypto.randomUUID(),
     sourceWarehouseId: form.sourceWarehouseId, targetWarehouseId: form.targetWarehouseId, remark: form.remark,
     items: form.items.map((i: any) => ({ itemId: i.itemId, itemType: i.itemType, quantity: Number(i.quantity), unit: i.unit }))
   })

@@ -114,18 +114,6 @@ public class ReportWorkService {
         rw.setAuditorName(securityUtils.currentUsername());
         rw.setAuditTime(LocalDateTime.now());
         reportWorkMapper.updateById(rw);
-
-        // 联动：只有最后一道工序的良品数才累加到工单完工数量（成品）
-        ProductionOrder order = orderMapper.selectById(rw.getWorkOrderId());
-        if (order != null && rw.getQualifiedQty() != null && isLastProcess(order, rw.getProcessId())) {
-            BigDecimal completed = order.getCompletedQty().add(rw.getQualifiedQty());
-            // 完工数量不超过工单计划数量
-            if (completed.compareTo(order.getQuantity()) > 0) {
-                completed = order.getQuantity();
-            }
-            order.setCompletedQty(completed);
-            orderMapper.updateById(order);
-        }
     }
 
     /** 审工：反审核（回退工单完工数量） */
@@ -141,34 +129,6 @@ public class ReportWorkService {
         rw.setAuditorName(null);
         rw.setAuditTime(null);
         reportWorkMapper.updateById(rw);
-
-        // 回退：扣减工单完工数量（仅最后一道工序）
-        ProductionOrder order = orderMapper.selectById(rw.getWorkOrderId());
-        if (order != null && rw.getQualifiedQty() != null && isLastProcess(order, rw.getProcessId())) {
-            BigDecimal completed = order.getCompletedQty().subtract(rw.getQualifiedQty());
-            if (completed.compareTo(BigDecimal.ZERO) < 0) {
-                completed = BigDecimal.ZERO;
-            }
-            order.setCompletedQty(completed);
-            orderMapper.updateById(order);
-        }
-    }
-
-    /** 判断工序是否是工单工艺路线的最后一道工序 */
-    private boolean isLastProcess(ProductionOrder order, Long processId) {
-        if (order.getProcessRouteId() == null) {
-            // 无工艺路线时，无法判断，按「是最后工序」处理（单工序场景）
-            return true;
-        }
-        ProcessRoute route = processRouteMapper.selectById(order.getProcessRouteId());
-        if (route == null) return true;
-        List<ProcessRouteItem> items = processRouteItemMapper.selectList(
-                new LambdaQueryWrapper<ProcessRouteItem>()
-                        .eq(ProcessRouteItem::getRouteId, route.getId())
-                        .orderByDesc(ProcessRouteItem::getSeqNo));
-        if (items == null || items.isEmpty()) return true;
-        // 最后一道工序 = seqNo 最大的那道
-        return items.get(0).getProcessId().equals(processId);
     }
 
     /** 审工：驳回 */

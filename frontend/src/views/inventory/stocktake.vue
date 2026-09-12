@@ -134,7 +134,7 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.warehouseId = undefined; query.status = undefined; query.page = 1; load() }
 
-function openCreate() { createWarehouseId = undefined; createRemark = ''; createVisible.value = true }
+function openCreate() { createWarehouseId.value = undefined; createRemark.value = ''; createVisible.value = true }
 
 async function handleCreate() {
   if (!createWarehouseId.value) { ElMessage.warning('请选择仓库'); return }

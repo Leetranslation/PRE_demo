@@ -63,6 +63,8 @@ public class QualityService {
     /** 创建质检单（针对待检库存的物料） */
     @Transactional
     public QualityInspection create(QualityInspection inspection) {
+        if (inspection.getSourceId() == null) throw new BizException("来源单据ID不能为空");
+        if (inspection.getItemId() == null) throw new BizException("物料/产品不能为空");
         inspection.setId(null);
         inspection.setInspectionNo(codeGenerator.next("QC"));
         inspection.setInspectionDate(inspection.getInspectionDate() != null
@@ -93,6 +95,9 @@ public class QualityService {
         pendingDim.setItemId(inspection.getItemId());
         pendingDim.setItemType(inspection.getItemType());
         pendingDim.setWarehouseId(inspection.getWarehouseId() != null ? inspection.getWarehouseId() : null);
+        pendingDim.setLocationId(inspection.getLocationId());
+        pendingDim.setBatchNo(inspection.getBatchNo());
+        pendingDim.setSerialNo(inspection.getSerialNo());
         pendingDim.setStockType("pending_qc");
 
         if ("qualified".equals(result)) {
@@ -103,6 +108,9 @@ public class QualityService {
             availableDim.setItemId(inspection.getItemId());
             availableDim.setItemType(inspection.getItemType());
             availableDim.setWarehouseId(inspection.getWarehouseId());
+            availableDim.setLocationId(inspection.getLocationId());
+            availableDim.setBatchNo(inspection.getBatchNo());
+            availableDim.setSerialNo(inspection.getSerialNo());
             availableDim.setStockType("available");
             inventoryService.change(availableDim, "in", inspection.getQuantity(),
                     "quality_qualified", inspection.getId(), inspection.getInspectionNo());
@@ -117,6 +125,9 @@ public class QualityService {
             unqualifiedDim.setItemId(inspection.getItemId());
             unqualifiedDim.setItemType(inspection.getItemType());
             unqualifiedDim.setWarehouseId(inspection.getWarehouseId());
+            unqualifiedDim.setLocationId(inspection.getLocationId());
+            unqualifiedDim.setBatchNo(inspection.getBatchNo());
+            unqualifiedDim.setSerialNo(inspection.getSerialNo());
             unqualifiedDim.setStockType("unqualified");
             inventoryService.change(unqualifiedDim, "in", inspection.getQuantity(),
                     "quality_unqualified", inspection.getId(), inspection.getInspectionNo());

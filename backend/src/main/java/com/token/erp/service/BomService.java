@@ -135,6 +135,8 @@ public class BomService {
         bomVersionMapper.insert(version);
 
         if (request.getItems() != null && !request.getItems().isEmpty()) {
+            // 删除旧明细，只保留最新版本（读取方按 bomId 查，避免历史明细导致子件翻倍）
+            bomItemMapper.delete(new LambdaQueryWrapper<BomItem>().eq(BomItem::getBomId, request.getId()));
             saveItems(request.getId(), version.getId(), request.getItems());
         }
         return bomMapper.selectById(request.getId());

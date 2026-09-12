@@ -9,6 +9,7 @@ import java.util.List;
 @Data
 public class TransferRequest {
 
+    private String requestId;
     private Long sourceWarehouseId;
     private Long targetWarehouseId;
     private LocalDate transferDate;

@@ -26,8 +26,10 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +51,8 @@ public class InventoryService {
     private final ProductMapper productMapper;
     private final StringRedisTemplate redisTemplate;
     private final NameFillUtil nameFillUtil;
+    /** 当前线程已持有的库存维度锁（同事务内重复维度可重入，避免自我死锁） */
+    private final ThreadLocal<Set<String>> threadHeldLocks = ThreadLocal.withInitial(HashSet::new);
 
     /**
      * 库存变动（统一入口）
@@ -82,11 +86,11 @@ public class InventoryService {
                         new TransactionSynchronization() {
                             @Override
                             public void afterCompletion(int status) {
-                                redisTemplate.delete(lockKey);
+                                releaseLock(lockKey);
                             }
                         });
             } else {
-                redisTemplate.delete(lockKey);
+                releaseLock(lockKey);
             }
         }
     }
@@ -96,11 +100,17 @@ public class InventoryService {
      * 让并发请求自动排队，而非立即失败
      */
     private boolean tryLock(String lockKey) {
+        Set<String> held = threadHeldLocks.get();
+        // 本线程已持有该锁（同事务内重复维度），重入直接放行，避免自我死锁
+        if (held.contains(lockKey)) {
+            return true;
+        }
         long deadline = System.currentTimeMillis() + 2000;
         while (System.currentTimeMillis() < deadline) {
             Boolean locked = redisTemplate.opsForValue()
                     .setIfAbsent(lockKey, "1", Duration.ofSeconds(10));
             if (Boolean.TRUE.equals(locked)) {
+                held.add(lockKey);
                 return true;
             }
             try {
@@ -416,11 +426,21 @@ public class InventoryService {
                     new TransactionSynchronization() {
                         @Override
                         public void afterCompletion(int status) {
-                            redisTemplate.delete(lockKey);
+                            releaseLock(lockKey);
                         }
                     });
         } else {
-            redisTemplate.delete(lockKey);
+            releaseLock(lockKey);
+        }
+    }
+
+    /** 释放锁并清理线程级持有记录 */
+    private void releaseLock(String lockKey) {
+        redisTemplate.delete(lockKey);
+        Set<String> held = threadHeldLocks.get();
+        held.remove(lockKey);
+        if (held.isEmpty()) {
+            threadHeldLocks.remove();
         }
     }
 

@@ -194,6 +194,8 @@ public class DataInitializer implements CommandLineRunner {
             {"outsource:order:start", "外协单开始/完工/作废", "button", null},
             // 系统管理 - 菜单
             {"system:user", "用户管理", "menu", "/system/user"},
+            {"system:user:reset", "重置密码", "button", null},
+            {"system:user:role", "分配角色", "button", null},
             {"system:role", "角色管理", "menu", "/system/role"},
             {"system:department", "部门管理", "menu", "/system/department"},
     };
@@ -282,7 +284,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setStatus(1);
             admin.setRemark("初始化超级管理员");
             userMapper.insert(admin);
-            log.info("已创建超级管理员 admin / admin123");
+            log.info("已创建超级管理员 admin");
         } else if (admin.getPassword() != null && admin.getPassword().contains("placeholder")) {
             admin.setPassword(passwordEncoder.encode("admin123"));
             userMapper.updateById(admin);

@@ -39,6 +39,12 @@ public class QcApply extends BaseEntity {
     private Long inspectionId;
     @Schema(description = "备注")
     private String remark;
+    @Schema(description = "库位ID（精确维度匹配）")
+    private Long locationId;
+    @Schema(description = "批次号（精确维度匹配）")
+    private String batchNo;
+    @Schema(description = "序列号（精确维度匹配）")
+    private String serialNo;
 
     /** 物料/产品编码、名称、仓库名称（冗余展示字段） */
     @TableField(exist = false)

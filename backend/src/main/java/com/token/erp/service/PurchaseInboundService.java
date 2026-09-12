@@ -92,6 +92,10 @@ public class PurchaseInboundService {
                                     .orderByAsc(PurchaseOrderItem::getId)
                                     .last("LIMIT 1"));
             if (orderItem == null) throw new BizException("订单中不存在该物料");
+            // 校验明细归属本订单，防止串单（IDOR）
+            if (!orderItem.getOrderId().equals(request.getOrderId())) {
+                throw new BizException("入库明细不属于该订单，禁止串单");
+            }
 
             // 校验：入库数量 ≤ 未入库数量（禁止超收）
             BigDecimal unInbound = orderItem.getQuantity().subtract(

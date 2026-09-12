@@ -167,6 +167,7 @@ function openDialog() {
 async function handleSave() {
   if (!form.direction || !form.items || form.items.length === 0) { ElMessage.warning('请选择方向并添加明细'); return }
   await otherStockCreate({
+    requestId: crypto.randomUUID(),
     direction: form.direction, type: form.type, warehouseId: form.warehouseId, remark: form.remark,
     items: form.items.map((i: any) => ({ itemId: i.itemId, itemType: i.itemType, quantity: Number(i.quantity) }))
   })

@@ -73,6 +73,9 @@ public class QcApplyService {
         apply.setItemId(request.getItemId());
         apply.setItemType(StringUtils.hasText(request.getItemType()) ? request.getItemType() : "material");
         apply.setWarehouseId(request.getWarehouseId());
+        apply.setLocationId(request.getLocationId());
+        apply.setBatchNo(request.getBatchNo());
+        apply.setSerialNo(request.getSerialNo());
         apply.setQuantity(request.getQuantity());
         apply.setApplyDate(request.getApplyDate() != null ? request.getApplyDate() : LocalDate.now());
         apply.setStatus("pending");
@@ -98,6 +101,9 @@ public class QcApplyService {
         inspection.setItemId(apply.getItemId());
         inspection.setItemType(apply.getItemType());
         inspection.setWarehouseId(apply.getWarehouseId());
+        inspection.setLocationId(apply.getLocationId());
+        inspection.setBatchNo(apply.getBatchNo());
+        inspection.setSerialNo(apply.getSerialNo());
         inspection.setQuantity(apply.getQuantity());
         inspection.setRemark(apply.getRemark());
         QualityInspection created = qualityService.create(inspection);
@@ -115,6 +121,9 @@ public class QcApplyService {
             availableDim.setItemId(apply.getItemId());
             availableDim.setItemType(apply.getItemType());
             availableDim.setWarehouseId(apply.getWarehouseId());
+            availableDim.setLocationId(apply.getLocationId());
+            availableDim.setBatchNo(apply.getBatchNo());
+            availableDim.setSerialNo(apply.getSerialNo());
             availableDim.setStockType("available");
             inventoryService.change(availableDim, "out", apply.getQuantity(),
                     "qc_apply", apply.getId(), apply.getApplyNo());
@@ -123,6 +132,9 @@ public class QcApplyService {
             pendingDim.setItemId(apply.getItemId());
             pendingDim.setItemType(apply.getItemType());
             pendingDim.setWarehouseId(apply.getWarehouseId());
+            pendingDim.setLocationId(apply.getLocationId());
+            pendingDim.setBatchNo(apply.getBatchNo());
+            pendingDim.setSerialNo(apply.getSerialNo());
             pendingDim.setStockType("pending_qc");
             inventoryService.change(pendingDim, "in", apply.getQuantity(),
                     "qc_apply", apply.getId(), apply.getApplyNo());

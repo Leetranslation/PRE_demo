@@ -24,6 +24,12 @@ public class QualityInspection extends BaseEntity {
     private LocalDate inspectionDate;
     private String result;
     private String remark;
+    /** 库位ID（精确维度匹配） */
+    private Long locationId;
+    /** 批次号（精确维度匹配） */
+    private String batchNo;
+    /** 序列号（精确维度匹配） */
+    private String serialNo;
 
     /** 物料/产品编码、名称、仓库名称（冗余展示字段） */
     @TableField(exist = false)

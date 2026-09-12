@@ -38,6 +38,7 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
+    @PreAuthorize("hasAuthority('system:user:reset')")
     public Result<Void> resetPassword(@RequestParam Long id, @RequestParam String newPassword) {
         userService.resetPassword(id, newPassword);
         return Result.success();
@@ -55,6 +56,7 @@ public class UserController {
     }
 
     @PostMapping("/assign-roles")
+    @PreAuthorize("hasAuthority('system:user:role')")
     public Result<Void> assignRoles(@RequestParam Long userId, @RequestBody List<Long> roleIds) {
         userService.assignRoles(userId, roleIds);
         return Result.success();

@@ -9,6 +9,7 @@ import com.token.erp.entity.OtherStock;
 import com.token.erp.entity.OtherStockItem;
 import com.token.erp.mapper.OtherStockItemMapper;
 import com.token.erp.mapper.OtherStockMapper;
+import com.token.erp.mapper.WarehouseMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class OtherStockService {
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
     private final NameFillUtil nameFillUtil;
+    private final WarehouseMapper warehouseMapper;
 
     public Page<OtherStock> page(long page, long pageSize, String direction, String type) {
         LambdaQueryWrapper<OtherStock> qw = new LambdaQueryWrapper<>();
@@ -68,7 +70,12 @@ public class OtherStockService {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new BizException("明细不能为空");
         }
-        idempotencyService.checkAndOccupy("other_stock_" + System.currentTimeMillis(), "other_stock");
+        // 幂等控制
+        idempotencyService.checkAndOccupy(request.getRequestId(), "other_stock");
+        // 校验仓库存在
+        if (request.getWarehouseId() == null || warehouseMapper.selectById(request.getWarehouseId()) == null) {
+            throw new BizException(404, "仓库不存在");
+        }
 
         OtherStock stock = new OtherStock();
         stock.setStockNo(codeGenerator.next("in".equals(request.getDirection()) ? "QTR" : "QTC"));

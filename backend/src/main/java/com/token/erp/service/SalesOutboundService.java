@@ -90,6 +90,10 @@ public class SalesOutboundService {
                                     .orderByAsc(SalesOrderItem::getId)
                                     .last("LIMIT 1"));
             if (orderItem == null) throw new BizException("订单中不存在该产品");
+            // 校验明细归属本订单，防止串单（IDOR）
+            if (!orderItem.getOrderId().equals(request.getOrderId())) {
+                throw new BizException("出库明细不属于该订单，禁止串单");
+            }
 
             // 校验：出库 ≤ 未出库数量（禁止超发）
             BigDecimal unOutbound = orderItem.getQuantity().subtract(

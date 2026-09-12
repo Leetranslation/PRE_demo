@@ -154,6 +154,7 @@ async function handleSave() {
   if (!form.warehouseId) { ElMessage.warning('请选择仓库'); return }
   if (!form.quantity || Number(form.quantity) <= 0) { ElMessage.warning('数量必须大于0'); return }
   await assemblyCreate({
+    requestId: crypto.randomUUID(),
     type: form.type, productId: form.productId, warehouseId: form.warehouseId,
     quantity: Number(form.quantity), remark: form.remark
   })

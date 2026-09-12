@@ -383,9 +383,12 @@ function openReturn(row: any) {
 async function handleReturn() {
   const qty = Number(returnForm.quantity)
   if (!returnForm.warehouseId || !returnForm.productId || !qty) { ElMessage.warning('请填写完整'); return }
-  returnForm.quantity = qty
-  returnForm.requestId = crypto.randomUUID()
-  await salesReturnCreate(returnForm)
+  await salesReturnCreate({
+    orderId: returnForm.orderId,
+    warehouseId: returnForm.warehouseId,
+    requestId: crypto.randomUUID(),
+    items: [{ productId: returnForm.productId, quantity: qty }]
+  })
   ElMessage.success('退货成功')
   returnVisible.value = false
   load()

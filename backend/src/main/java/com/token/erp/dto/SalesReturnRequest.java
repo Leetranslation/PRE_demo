@@ -9,6 +9,8 @@ import java.util.List;
 @Data
 @Schema(description = "销售退货请求")
 public class SalesReturnRequest {
+    @Schema(description = "幂等键（前端生成 UUID）")
+    private String requestId;
     @Schema(description = "销售订单ID")
     private Long orderId;
     @Schema(description = "入库仓库ID")

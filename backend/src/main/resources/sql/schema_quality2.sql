@@ -32,3 +32,16 @@ CREATE TABLE `qc_apply` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='质检申请单';
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- 增量：质检单/质检申请单补充批次库位维度（修复质检对带批次库存失效）
+-- ============================================================
+ALTER TABLE `qc_apply`
+  ADD COLUMN `location_id` BIGINT       DEFAULT NULL COMMENT '库位ID' AFTER `warehouse_id`,
+  ADD COLUMN `batch_no`    VARCHAR(64)  DEFAULT NULL COMMENT '批次号' AFTER `location_id`,
+  ADD COLUMN `serial_no`   VARCHAR(64)  DEFAULT NULL COMMENT '序列号' AFTER `batch_no`;
+
+ALTER TABLE `quality_inspection`
+  ADD COLUMN `location_id` BIGINT       DEFAULT NULL COMMENT '库位ID' AFTER `warehouse_id`,
+  ADD COLUMN `batch_no`    VARCHAR(64)  DEFAULT NULL COMMENT '批次号' AFTER `location_id`,
+  ADD COLUMN `serial_no`   VARCHAR(64)  DEFAULT NULL COMMENT '序列号' AFTER `batch_no`;

@@ -10,6 +10,8 @@ import java.util.List;
 @Data
 @Schema(description = "其他出入库单请求")
 public class OtherStockRequest {
+    @Schema(description = "幂等键（前端生成 UUID）")
+    private String requestId;
     @Schema(description = "方向：in入库/out出库")
     private String direction;
     @Schema(description = "类型：期初/盘盈/盘亏/领用/其他")

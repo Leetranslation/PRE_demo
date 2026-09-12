@@ -107,6 +107,10 @@ public class ProductionInboundService {
         BigDecimal totalInbound = BigDecimal.ZERO;
         for (ProductionInboundItem item : request.getItems()) {
             if (item.getProductId() == null) throw new BizException("产品不能为空");
+            // 校验入库产品与工单产品一致，防止串产品入库
+            if (!item.getProductId().equals(order.getProductId())) {
+                throw new BizException("入库产品与工单产品不一致，禁止入库");
+            }
 
             // 校验：入库 ≤ 未完成数量（禁止超收）
             BigDecimal uncompleted = order.getQuantity().subtract(order.getCompletedQty());

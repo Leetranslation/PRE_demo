@@ -25,6 +25,12 @@ public class QcApplyRequest {
     private BigDecimal quantity;
     @Schema(description = "申请日期")
     private LocalDate applyDate;
+    @Schema(description = "库位ID（精确维度匹配）")
+    private Long locationId;
+    @Schema(description = "批次号（精确维度匹配）")
+    private String batchNo;
+    @Schema(description = "序列号（精确维度匹配）")
+    private String serialNo;
     @Schema(description = "备注")
     private String remark;
 }

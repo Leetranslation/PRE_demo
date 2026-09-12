@@ -9,6 +9,7 @@ import com.token.erp.entity.Transfer;
 import com.token.erp.entity.TransferItem;
 import com.token.erp.mapper.TransferItemMapper;
 import com.token.erp.mapper.TransferMapper;
+import com.token.erp.mapper.WarehouseMapper;
 import com.token.erp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,8 @@ public class TransferService {
     private final CodeGenerator codeGenerator;
     private final SecurityUtils securityUtils;
     private final NameFillUtil nameFillUtil;
+    private final IdempotencyService idempotencyService;
+    private final WarehouseMapper warehouseMapper;
 
     public Page<Transfer> page(long page, long pageSize, Long sourceWarehouseId, Long targetWarehouseId) {
         LambdaQueryWrapper<Transfer> qw = new LambdaQueryWrapper<>();
@@ -77,10 +80,17 @@ public class TransferService {
     /** 创建调拨单并执行库存变动（源出 + 目标入） */
     @Transactional
     public Transfer create(TransferRequest req) {
+        // 幂等控制
+        idempotencyService.checkAndOccupy(req.getRequestId(), "transfer");
         if (req.getSourceWarehouseId() == null || req.getTargetWarehouseId() == null)
             throw new BizException("源仓库和目标仓库不能为空");
         if (req.getSourceWarehouseId().equals(req.getTargetWarehouseId()))
             throw new BizException("源仓库和目标仓库不能相同");
+        // 校验仓库存在
+        if (warehouseMapper.selectById(req.getSourceWarehouseId()) == null)
+            throw new BizException(404, "源仓库不存在");
+        if (warehouseMapper.selectById(req.getTargetWarehouseId()) == null)
+            throw new BizException(404, "目标仓库不存在");
         if (req.getItems() == null || req.getItems().isEmpty()) throw new BizException("调拨明细不能为空");
 
         Transfer t = new Transfer();

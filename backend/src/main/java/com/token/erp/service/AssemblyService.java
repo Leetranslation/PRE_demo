@@ -42,6 +42,7 @@ public class AssemblyService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final NameFillUtil nameFillUtil;
+    private final IdempotencyService idempotencyService;
 
     public Page<AssemblyOrder> page(long page, long pageSize, String type) {
         LambdaQueryWrapper<AssemblyOrder> qw = new LambdaQueryWrapper<>();
@@ -84,6 +85,8 @@ public class AssemblyService {
 
     @Transactional
     public AssemblyOrder create(AssemblyRequest req) {
+        // 幂等控制
+        idempotencyService.checkAndOccupy(req.getRequestId(), "assembly");
         String type = req.getType() == null ? "assembly" : req.getType();
         if (!"assembly".equals(type) && !"disassembly".equals(type))
             throw new BizException("类型必须为 assembly 或 disassembly");

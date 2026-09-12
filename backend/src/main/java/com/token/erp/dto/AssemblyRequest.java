@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 public class AssemblyRequest {
 
+    private String requestId;
     /** assembly组装 / disassembly拆卸 */
     private String type;
     private Long productId;
