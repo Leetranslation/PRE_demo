@@ -75,6 +75,13 @@
           <el-button @click="pickerVisible = true">选择</el-button>
         </div>
       </el-form-item>
+      <el-form-item label="仓库">
+        <el-select v-model="form.warehouseId" placeholder="请选择" clearable filterable style="width: 100%">
+          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="批次号"><el-input v-model="form.batchNo" placeholder="可选，带批次库存需填写" /></el-form-item>
+      <el-form-item label="序列号"><el-input v-model="form.serialNo" placeholder="可选" /></el-form-item>
       <el-form-item label="来源单号"><el-input v-model="form.sourceNo" placeholder="可选" /></el-form-item>
       <el-form-item label="质检数量" required><el-input v-model="form.quantity" type="number" /></el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
@@ -93,6 +100,7 @@ defineOptions({ name: 'QcApply' })
 import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { qcApplyList, qcApplyCreate, qcApplyGenerate } from '@/api/purchase'
+import { warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 
 const loading = ref(false)
@@ -102,6 +110,7 @@ const dialogVisible = ref(false)
 const pickerVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, sourceType: undefined as string | undefined, status: undefined as string | undefined })
 const form = reactive<any>({})
+const warehouses = ref<any[]>([])
 
 const itemLabel = computed(() => form.itemName || '')
 
@@ -115,6 +124,11 @@ function onSelect(item: any) {
   form.itemId = item.id
   form.itemType = 'material'
   form.itemName = `${item.code} ${item.name}`
+}
+
+async function loadWarehouses() {
+  const res = await warehouseList({ page: 1, pageSize: 100, status: 1 })
+  warehouses.value = res.records
 }
 
 async function load() {
@@ -133,6 +147,7 @@ function handleReset() { query.sourceType = undefined; query.status = undefined;
 
 function openDialog() {
   Object.keys(form).forEach((k) => delete form[k])
+  loadWarehouses()
   dialogVisible.value = true
 }
 
@@ -141,6 +156,8 @@ async function handleSave() {
   await qcApplyCreate({
     sourceType: form.sourceType, sourceNo: form.sourceNo,
     itemId: form.itemId, itemType: form.itemType,
+    warehouseId: form.warehouseId,
+    batchNo: form.batchNo, serialNo: form.serialNo,
     quantity: Number(form.quantity), remark: form.remark
   })
   ElMessage.success('保存成功')
