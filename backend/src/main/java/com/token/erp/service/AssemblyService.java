@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 组装/拆卸：按 BOM 展开子件，成品与子件反向变动库存
@@ -39,17 +41,45 @@ public class AssemblyService {
     private final ProductMapper productMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<AssemblyOrder> page(long page, long pageSize, String type) {
         LambdaQueryWrapper<AssemblyOrder> qw = new LambdaQueryWrapper<>();
         if (type != null && !type.isEmpty()) qw.eq(AssemblyOrder::getType, type);
         qw.orderByDesc(AssemblyOrder::getId);
-        return assemblyOrderMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<AssemblyOrder> result = assemblyOrderMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    result.getRecords().stream().map(AssemblyOrder::getProductId).collect(Collectors.toList()));
+            Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                    result.getRecords().stream().map(AssemblyOrder::getWarehouseId).collect(Collectors.toList()));
+            result.getRecords().forEach(o -> {
+                String[] arr = pm.get(o.getProductId());
+                if (arr != null) {
+                    o.setProductCode(arr[0]);
+                    o.setProductName(arr[1]);
+                }
+                o.setWarehouseName(wm.get(o.getWarehouseId()));
+            });
+        }
+        return result;
     }
 
     public List<AssemblyOrderItem> items(Long orderId) {
-        return assemblyOrderItemMapper.selectList(
+        List<AssemblyOrderItem> list = assemblyOrderItemMapper.selectList(
                 new LambdaQueryWrapper<AssemblyOrderItem>().eq(AssemblyOrderItem::getOrderId, orderId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(AssemblyOrderItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

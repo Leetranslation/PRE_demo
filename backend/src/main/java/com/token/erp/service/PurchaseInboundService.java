@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class PurchaseInboundService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseInbound> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<PurchaseInbound> qw = new LambdaQueryWrapper<>();
@@ -34,9 +38,21 @@ public class PurchaseInboundService {
     }
 
     /** 入库单明细 */
-    public java.util.List<PurchaseInboundItem> items(Long inboundId) {
-        return inboundItemMapper.selectList(
+    public List<PurchaseInboundItem> items(Long inboundId) {
+        List<PurchaseInboundItem> list = inboundItemMapper.selectList(
                 new LambdaQueryWrapper<PurchaseInboundItem>().eq(PurchaseInboundItem::getInboundId, inboundId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(PurchaseInboundItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     /**

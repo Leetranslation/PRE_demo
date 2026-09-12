@@ -23,7 +23,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="afterSaleNo" label="售后单号" width="160" />
-      <el-table-column prop="orderId" label="订单ID" width="90" />
+      <el-table-column prop="sourceOrderNo" label="销售订单号" width="160" />
       <el-table-column prop="type" label="类型" width="90" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">

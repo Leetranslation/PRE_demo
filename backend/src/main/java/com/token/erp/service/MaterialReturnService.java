@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 生产退料服务：退料增加库存（入库方向）
@@ -28,6 +31,7 @@ public class MaterialReturnService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
     /** 退料单列表 */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialReturn> page(
@@ -40,10 +44,22 @@ public class MaterialReturnService {
     }
 
     /** 退料单明细 */
-    public java.util.List<MaterialReturnItem> items(Long returnId) {
-        return returnItemMapper.selectList(
+    public List<MaterialReturnItem> items(Long returnId) {
+        List<MaterialReturnItem> list = returnItemMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialReturnItem>()
                         .eq(MaterialReturnItem::getReturnId, returnId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(MaterialReturnItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

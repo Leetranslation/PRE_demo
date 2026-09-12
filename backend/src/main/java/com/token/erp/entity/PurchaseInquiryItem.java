@@ -2,6 +2,7 @@ package com.token.erp.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -21,4 +22,12 @@ public class PurchaseInquiryItem implements Serializable {
     private Long supplierId;
     private BigDecimal price;
     private String remark;
+
+    /** 物料编码/名称、供应商名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String materialCode;
+    @TableField(exist = false)
+    private String materialName;
+    @TableField(exist = false)
+    private String supplierName;
 }

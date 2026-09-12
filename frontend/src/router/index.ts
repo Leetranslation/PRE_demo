@@ -19,6 +19,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '首页', icon: 'HomeFilled' }
       },
+      {
+        path: 'cockpit',
+        name: 'Cockpit',
+        component: () => import('@/views/dashboard/cockpit.vue'),
+        meta: { title: '经营驾驶舱' }
+      },
       // ===== 基础资料 =====
       {
         path: 'base/customer',
@@ -403,6 +409,25 @@ const routes: RouteRecordRaw[] = [
         name: 'QualityBase',
         component: () => import('@/views/quality/base.vue'),
         meta: { title: '检验方法/方案' }
+      },
+      // ===== 外协 =====
+      {
+        path: 'outsource/order',
+        name: 'OutsourceOrder',
+        component: () => import('@/views/outsource/order.vue'),
+        meta: { title: '外协单' }
+      },
+      {
+        path: 'outsource/issue',
+        name: 'OutsourceIssue',
+        component: () => import('@/views/outsource/issue.vue'),
+        meta: { title: '外协领料' }
+      },
+      {
+        path: 'outsource/inbound',
+        name: 'OutsourceInbound',
+        component: () => import('@/views/outsource/inbound.vue'),
+        meta: { title: '外协入库' }
       },
       // ===== 系统管理 =====
       {

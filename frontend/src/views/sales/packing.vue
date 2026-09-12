@@ -16,7 +16,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="packingNo" label="装箱单号" width="160" />
-      <el-table-column prop="outboundId" label="出库单ID" width="90" />
+      <el-table-column prop="outboundNo" label="出库单号" width="160" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">

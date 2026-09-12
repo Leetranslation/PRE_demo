@@ -1,5 +1,6 @@
 package com.token.erp.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.token.erp.common.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,4 +33,11 @@ public class Quotation extends BaseEntity {
     private String bizStatus;
     @Schema(description = "备注")
     private String remark;
+
+    /** 产品编号（冗余展示字段）：首个产品编号，多品种时加「等N种」 */
+    @TableField(exist = false)
+    private String productCode;
+    /** 产品名称（冗余展示字段）：首个产品名称 */
+    @TableField(exist = false)
+    private String productName;
 }

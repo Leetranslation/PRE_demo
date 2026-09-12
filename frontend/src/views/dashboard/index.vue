@@ -27,7 +27,8 @@
     <el-card shadow="never" class="section">
       <template #header><span>低库存预警</span></template>
       <el-table :data="stats.lowStockItems || []" border size="small">
-        <el-table-column prop="itemId" label="物料ID" width="120" />
+        <el-table-column prop="itemCode" label="物料编号" width="150" show-overflow-tooltip />
+        <el-table-column prop="itemName" label="物料名称" min-width="140" show-overflow-tooltip />
         <el-table-column label="类型" width="100">
           <template #default="{ row }">{{ row.itemType === 'material' ? '物料' : '产品' }}</template>
         </el-table-column>

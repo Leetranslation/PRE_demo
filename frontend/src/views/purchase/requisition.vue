@@ -94,7 +94,7 @@
 
   <el-dialog v-model="detailVisible" title="申请明细" width="600px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="materialId" label="物料ID" width="90" />
+      <el-table-column prop="materialName" label="物料" width="140" />
       <el-table-column prop="quantity" label="需求数量" width="110" align="right" />
       <el-table-column prop="requiredDate" label="需求日期" width="120" />
     </el-table>

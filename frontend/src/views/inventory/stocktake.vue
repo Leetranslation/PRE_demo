@@ -73,7 +73,7 @@
 
   <el-dialog v-model="countVisible" :title="countEditable ? '录入实际数' : '盘点明细'" width="760px">
     <el-table :data="items" border size="small">
-      <el-table-column prop="itemId" label="物料/产品ID" width="110" />
+      <el-table-column prop="itemName" label="物料/产品" width="160" />
       <el-table-column prop="itemType" label="类型" width="90" />
       <el-table-column prop="bookQty" label="账面数量" width="120" align="right" />
       <el-table-column label="实际数量" width="150">

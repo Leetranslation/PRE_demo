@@ -20,6 +20,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class ProductionOrderService {
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<ProductionOrder> page(long page, long pageSize, String keyword, String approveStatus, String orderType) {
         LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
@@ -49,7 +52,19 @@ public class ProductionOrderService {
             qw.eq(ProductionOrder::getOrderType, "product");
         }
         qw.orderByDesc(ProductionOrder::getId);
-        return orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<ProductionOrder> result = orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    result.getRecords().stream().map(ProductionOrder::getProductId).collect(Collectors.toList()));
+            result.getRecords().forEach(o -> {
+                String[] arr = pm.get(o.getProductId());
+                if (arr != null) {
+                    o.setProductCode(arr[0]);
+                    o.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     @Transactional

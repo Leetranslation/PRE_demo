@@ -22,6 +22,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class ContractService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Contract> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<Contract> qw = new LambdaQueryWrapper<>();
@@ -43,7 +46,29 @@ public class ContractService {
             qw.eq(Contract::getApproveStatus, approveStatus);
         }
         qw.orderByDesc(Contract::getId);
-        return contractMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Contract> result = contractMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            List<Long> cids = result.getRecords().stream().map(Contract::getId).collect(Collectors.toList());
+            List<ContractItem> allItems = itemMapper.selectList(
+                    new LambdaQueryWrapper<ContractItem>()
+                            .in(ContractItem::getContractId, cids)
+                            .orderByAsc(ContractItem::getId));
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    allItems.stream().map(ContractItem::getProductId).distinct().collect(Collectors.toList()));
+            Map<Long, List<ContractItem>> grouped = allItems.stream()
+                    .collect(Collectors.groupingBy(ContractItem::getContractId));
+            result.getRecords().forEach(c -> {
+                List<ContractItem> its = grouped.get(c.getId());
+                if (its == null || its.isEmpty()) return;
+                String[] arr = pm.get(its.get(0).getProductId());
+                long kinds = its.stream().map(ContractItem::getProductId).distinct().count();
+                if (arr != null) {
+                    c.setProductCode(arr[0] + (kinds > 1 ? " 等" + kinds + "种" : ""));
+                    c.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     public List<ContractItem> items(Long contractId) {

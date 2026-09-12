@@ -15,6 +15,9 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,13 +27,34 @@ public class QcApplyService {
     private final QualityService qualityService;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<QcApply> page(long page, long pageSize, String sourceType, String status) {
         LambdaQueryWrapper<QcApply> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(sourceType)) qw.eq(QcApply::getSourceType, sourceType);
         if (StringUtils.hasText(status)) qw.eq(QcApply::getStatus, status);
         qw.orderByDesc(QcApply::getId);
-        return qcApplyMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<QcApply> result = qcApplyMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            List<QcApply> records = result.getRecords();
+            List<Long> pids = records.stream().filter(i -> "product".equals(i.getItemType()))
+                    .map(QcApply::getItemId).collect(Collectors.toList());
+            List<Long> mids = records.stream().filter(i -> !"product".equals(i.getItemType()))
+                    .map(QcApply::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                    records.stream().map(QcApply::getWarehouseId).collect(Collectors.toList()));
+            records.forEach(i -> {
+                String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+                if (arr != null) {
+                    i.setItemCode(arr[0]);
+                    i.setItemName(arr[1]);
+                }
+                i.setWarehouseName(wm.get(i.getWarehouseId()));
+            });
+        }
+        return result;
     }
 
     @Transactional

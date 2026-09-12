@@ -20,6 +20,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存盘点：盘点方案 → 录实际数 → 差异生成调整（盘盈盘亏）→ 调库存
@@ -35,18 +37,41 @@ public class StocktakeService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Stocktake> page(long page, long pageSize, Long warehouseId, String status) {
         LambdaQueryWrapper<Stocktake> qw = new LambdaQueryWrapper<>();
         if (warehouseId != null) qw.eq(Stocktake::getWarehouseId, warehouseId);
         if (status != null && !status.isEmpty()) qw.eq(Stocktake::getStatus, status);
         qw.orderByDesc(Stocktake::getId);
-        return stocktakeMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Stocktake> result = stocktakeMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                    result.getRecords().stream().map(Stocktake::getWarehouseId).collect(Collectors.toList()));
+            result.getRecords().forEach(s -> s.setWarehouseName(wm.get(s.getWarehouseId())));
+        }
+        return result;
     }
 
     public List<StocktakeItem> items(Long stocktakeId) {
-        return stocktakeItemMapper.selectList(
+        List<StocktakeItem> list = stocktakeItemMapper.selectList(
                 new LambdaQueryWrapper<StocktakeItem>().eq(StocktakeItem::getStocktakeId, stocktakeId));
+        if (!list.isEmpty()) {
+            List<Long> pids = list.stream().filter(i -> "product".equals(i.getItemType()))
+                    .map(StocktakeItem::getItemId).collect(Collectors.toList());
+            List<Long> mids = list.stream().filter(i -> !"product".equals(i.getItemType()))
+                    .map(StocktakeItem::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            list.forEach(i -> {
+                String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+                if (arr != null) {
+                    i.setItemCode(arr[0]);
+                    i.setItemName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     /** 创建盘点方案：自动带入该仓库全部可用库存为账面数 */

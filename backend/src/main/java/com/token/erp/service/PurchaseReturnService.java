@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 采购退货服务：退回供应商，库存【出库】(out)
@@ -32,17 +34,36 @@ public class PurchaseReturnService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseReturn> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<PurchaseReturn> qw = new LambdaQueryWrapper<>();
         if (orderId != null) qw.eq(PurchaseReturn::getOrderId, orderId);
         qw.orderByDesc(PurchaseReturn::getId);
-        return returnMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<PurchaseReturn> result = returnMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> om = nameFillUtil.purchaseOrderNoMap(
+                    result.getRecords().stream().map(PurchaseReturn::getOrderId).collect(Collectors.toList()));
+            result.getRecords().forEach(r -> r.setSourceOrderNo(om.get(r.getOrderId())));
+        }
+        return result;
     }
 
     public List<PurchaseReturnItem> items(Long returnId) {
-        return returnItemMapper.selectList(
+        List<PurchaseReturnItem> list = returnItemMapper.selectList(
                 new LambdaQueryWrapper<PurchaseReturnItem>().eq(PurchaseReturnItem::getReturnId, returnId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(PurchaseReturnItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

@@ -25,7 +25,9 @@
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="销售单号" width="170" />
-      <el-table-column prop="customerId" label="客户ID" width="90" />
+      <el-table-column prop="customerName" label="客户" width="140" />
+      <el-table-column prop="productCode" label="产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="productName" label="产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="orderDate" label="订单日期" width="120" />
       <el-table-column label="审批状态" width="100">
         <template #default="{ row }">
@@ -88,7 +90,7 @@
         <template #default="{ row }">
           <div class="picker-cell">
             <template v-if="row.productId">
-              <span class="picker-name">{{ row.productName }}</span>
+              <span class="picker-name">{{ row.productCode }} {{ row.productName }}</span>
               <span class="picker-spec">{{ row.spec }}</span>
             </template>
             <span v-else class="picker-empty">未选择产品</span>
@@ -168,7 +170,9 @@
   <!-- 明细查看 -->
   <el-dialog v-model="itemsVisible" title="销售明细" width="720px">
     <el-table :data="items" border size="small">
-      <el-table-column prop="productId" label="产品ID" width="100" />
+      <el-table-column label="产品" min-width="220">
+        <template #default="{ row }">{{ row.productCode }} {{ row.productName }}</template>
+      </el-table-column>
       <el-table-column prop="quantity" label="数量" width="110" />
       <el-table-column prop="price" label="含税单价" width="110" />
       <el-table-column prop="amountExTax" label="不含税金额" width="120" />
@@ -215,7 +219,9 @@ const warehouseLoading = ref(false)
 const { selection, onSelectionChange, handleExport } = useExport(
   [
     { prop: 'orderNo', label: '销售单号' },
-    { prop: 'customerId', label: '客户ID' },
+    { prop: 'customerName', label: '客户' },
+    { prop: 'productCode', label: '产品编号' },
+    { prop: 'productName', label: '产品名称' },
     { prop: 'orderDate', label: '订单日期' },
     { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },
     { prop: 'bizStatus', label: '业务状态', formatter: (row: any) => bizText(row.bizStatus) },
@@ -256,6 +262,7 @@ function onProductSelected(product: any) {
     returnForm.productName = product.name
   } else if (currentProductRow.value) {
     currentProductRow.value.productId = product.id
+    currentProductRow.value.productCode = product.code
     currentProductRow.value.productName = product.name
     currentProductRow.value.spec = product.spec
     currentProductRow.value.unit = product.unit

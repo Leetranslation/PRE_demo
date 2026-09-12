@@ -1,5 +1,6 @@
 package com.token.erp.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.token.erp.common.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,4 +28,8 @@ public class SalesReturn extends BaseEntity {
     private String status;
     @Schema(description = "备注")
     private String remark;
+
+    /** 销售订单号（冗余展示字段） */
+    @TableField(exist = false)
+    private String sourceOrderNo;
 }

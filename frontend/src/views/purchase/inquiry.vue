@@ -99,9 +99,9 @@
 
   <el-dialog v-model="detailVisible" title="询价明细" width="640px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="materialId" label="物料ID" width="90" />
+      <el-table-column prop="materialName" label="物料" width="140" />
       <el-table-column prop="quantity" label="数量" width="100" align="right" />
-      <el-table-column prop="supplierId" label="供应商ID" width="100" />
+      <el-table-column prop="supplierName" label="供应商" width="140" />
       <el-table-column prop="price" label="报价单价" width="110" align="right" />
     </el-table>
   </el-dialog>

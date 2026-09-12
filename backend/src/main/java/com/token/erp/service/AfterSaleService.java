@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class AfterSaleService {
@@ -19,13 +22,20 @@ public class AfterSaleService {
     private final AfterSaleMapper afterSaleMapper;
     private final SalesOrderMapper orderMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<AfterSale> page(long page, long pageSize, String keyword, String status) {
         LambdaQueryWrapper<AfterSale> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) qw.like(AfterSale::getAfterSaleNo, keyword);
         if (StringUtils.hasText(status)) qw.eq(AfterSale::getStatus, status);
         qw.orderByDesc(AfterSale::getId);
-        return afterSaleMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<AfterSale> result = afterSaleMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> om = nameFillUtil.salesOrderNoMap(
+                    result.getRecords().stream().map(AfterSale::getOrderId).collect(Collectors.toList()));
+            result.getRecords().forEach(a -> a.setSourceOrderNo(om.get(a.getOrderId())));
+        }
+        return result;
     }
 
     @Transactional

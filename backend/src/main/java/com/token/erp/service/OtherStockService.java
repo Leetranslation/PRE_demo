@@ -17,6 +17,8 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,7 @@ public class OtherStockService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<OtherStock> page(long page, long pageSize, String direction, String type) {
         LambdaQueryWrapper<OtherStock> qw = new LambdaQueryWrapper<>();
@@ -37,8 +40,24 @@ public class OtherStockService {
     }
 
     public List<OtherStockItem> items(Long stockId) {
-        return itemMapper.selectList(
+        List<OtherStockItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<OtherStockItem>().eq(OtherStockItem::getStockId, stockId));
+        if (!list.isEmpty()) {
+            List<Long> pids = list.stream().filter(i -> "product".equals(i.getItemType()))
+                    .map(OtherStockItem::getItemId).collect(Collectors.toList());
+            List<Long> mids = list.stream().filter(i -> !"product".equals(i.getItemType()))
+                    .map(OtherStockItem::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            list.forEach(i -> {
+                String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+                if (arr != null) {
+                    i.setItemCode(arr[0]);
+                    i.setItemName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

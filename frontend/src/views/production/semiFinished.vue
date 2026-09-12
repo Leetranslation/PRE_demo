@@ -16,7 +16,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="orderNo" label="加工单号" width="170" />
-      <el-table-column prop="productId" label="产品ID" width="100" />
+      <el-table-column prop="productName" label="产品" width="140" />
       <el-table-column prop="quantity" label="数量" width="100" align="right" />
       <el-table-column label="审批状态" width="100">
         <template #default="{ row }">{{ approveText(row.approveStatus) }}</template>

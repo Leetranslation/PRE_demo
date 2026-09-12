@@ -106,7 +106,7 @@
 
   <el-dialog v-model="detailVisible" title="明细" width="560px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="itemId" label="物料ID" width="90" />
+      <el-table-column prop="itemName" label="物料/产品" width="140" />
       <el-table-column prop="quantity" label="数量" width="110" align="right" />
     </el-table>
   </el-dialog>

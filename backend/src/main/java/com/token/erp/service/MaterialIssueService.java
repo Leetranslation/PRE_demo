@@ -8,11 +8,14 @@ import com.token.erp.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 生产领料服务
@@ -26,23 +29,42 @@ public class MaterialIssueService {
     private final MaterialIssueItemMapper issueItemMapper;
     private final ProductionOrderMapper orderMapper;
     private final BomItemMapper bomItemMapper;
+    private final OutsourceOrderMapper outsourceMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
-    /** 领料单列表 */
+    /** 领料单列表（issueType 默认只查生产领料） */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialIssue> page(
-            long page, long pageSize, Long orderId) {
+            long page, long pageSize, Long orderId, String issueType) {
         LambdaQueryWrapper<MaterialIssue> qw = new LambdaQueryWrapper<>();
         if (orderId != null) qw.eq(MaterialIssue::getOrderId, orderId);
+        if (StringUtils.hasText(issueType)) {
+            qw.eq(MaterialIssue::getIssueType, issueType);
+        } else {
+            qw.eq(MaterialIssue::getIssueType, "production");
+        }
         qw.orderByDesc(MaterialIssue::getId);
         return issueMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize), qw);
     }
 
     /** 领料单明细 */
     public List<MaterialIssueItem> items(Long issueId) {
-        return issueItemMapper.selectList(
+        List<MaterialIssueItem> list = issueItemMapper.selectList(
                 new LambdaQueryWrapper<MaterialIssueItem>().eq(MaterialIssueItem::getIssueId, issueId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(MaterialIssueItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional
@@ -55,9 +77,20 @@ public class MaterialIssueService {
         if (order.getBomId() == null) throw new BizException("该工单无 BOM，无法领料");
         if (request.getItems() == null || request.getItems().isEmpty()) throw new BizException("领料明细不能为空");
 
+        // 领料类型：production生产 / outsource_whole整单外协 / outsource_process工序外协
+        String issueType = StringUtils.hasText(request.getIssueType()) ? request.getIssueType() : "production";
+        if (!"production".equals(issueType)) {
+            if (request.getOutsourceId() == null) throw new BizException("外协领料必须关联外协单");
+            OutsourceOrder outsource = outsourceMapper.selectById(request.getOutsourceId());
+            if (outsource == null) throw new BizException(404, "外协单不存在");
+            if (!"approved".equals(outsource.getApproveStatus())) throw new BizException("外协单未审批，不能领料");
+        }
+
         MaterialIssue issue = new MaterialIssue();
         issue.setIssueNo(codeGenerator.next("LL"));
+        issue.setIssueType(issueType);
         issue.setOrderId(request.getOrderId());
+        issue.setOutsourceId(request.getOutsourceId());
         issue.setWarehouseId(request.getWarehouseId());
         issue.setIssueDate(request.getIssueDate() != null ? request.getIssueDate() : LocalDate.now());
         issue.setStatus("completed");

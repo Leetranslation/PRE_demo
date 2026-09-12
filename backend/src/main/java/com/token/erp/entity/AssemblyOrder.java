@@ -1,6 +1,7 @@
 package com.token.erp.entity;
 
 import com.token.erp.common.BaseEntity;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,4 +23,12 @@ public class AssemblyOrder extends BaseEntity {
     private LocalDate bizDate;
     private String status;
     private String remark;
+
+    /** 产品编码/名称、仓库名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String productCode;
+    @TableField(exist = false)
+    private String productName;
+    @TableField(exist = false)
+    private String warehouseName;
 }

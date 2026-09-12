@@ -26,7 +26,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="productId" label="产品ID" width="90" />
+      <el-table-column prop="productName" label="产品" width="140" />
       <el-table-column prop="quantity" label="成品数量" width="100" align="right" />
       <el-table-column label="仓库" width="140">
         <template #default="{ row }">{{ warehouseName(row.warehouseId) }}</template>
@@ -84,7 +84,7 @@
 
   <el-dialog v-model="detailVisible" title="子件明细" width="560px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="materialId" label="物料ID" width="100" />
+      <el-table-column prop="materialName" label="物料" width="140" />
       <el-table-column prop="quantity" label="数量" width="120" align="right" />
       <el-table-column prop="unit" label="单位" width="90" />
     </el-table>

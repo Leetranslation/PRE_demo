@@ -12,7 +12,9 @@ import java.time.LocalDate;
 @TableName("production_inbound")
 public class ProductionInbound extends BaseEntity {
     private String inboundNo;
+    private String inboundType;
     private Long orderId;
+    private Long outsourceId;
     private Long warehouseId;
     private LocalDate inboundDate;
     private String status;

@@ -27,6 +27,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存核心服务
@@ -46,6 +48,7 @@ public class InventoryService {
     private final MaterialMapper materialMapper;
     private final ProductMapper productMapper;
     private final StringRedisTemplate redisTemplate;
+    private final NameFillUtil nameFillUtil;
 
     /**
      * 库存变动（统一入口）
@@ -216,7 +219,9 @@ public class InventoryService {
                     .or().like(Inventory::getSerialNo, keyword));
         }
         qw.orderByDesc(Inventory::getId);
-        return inventoryMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Inventory> result = inventoryMapper.selectPage(new Page<>(page, pageSize), qw);
+        fillInvNames(result.getRecords());
+        return result;
     }
 
     /** 库存流水查询 */
@@ -226,7 +231,9 @@ public class InventoryService {
         if (itemType != null && !itemType.isEmpty()) qw.eq(InventoryTransaction::getItemType, itemType);
         if (bizType != null && !bizType.isEmpty()) qw.eq(InventoryTransaction::getBizType, bizType);
         qw.orderByDesc(InventoryTransaction::getId);
-        return transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<InventoryTransaction> result = transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        fillTxNames(result.getRecords());
+        return result;
     }
 
     /** 库存预警：查低于最低库存/安全库存的物料和产品 */
@@ -301,7 +308,9 @@ public class InventoryService {
         LambdaQueryWrapper<InventoryTransaction> qw = new LambdaQueryWrapper<>();
         if (batchNo != null && !batchNo.isEmpty()) qw.eq(InventoryTransaction::getBatchNo, batchNo);
         qw.orderByAsc(InventoryTransaction::getId);
-        return transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<InventoryTransaction> result = transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        fillTxNames(result.getRecords());
+        return result;
     }
 
     /** 序列号跟踪：按序列号查流水 */
@@ -309,7 +318,9 @@ public class InventoryService {
         LambdaQueryWrapper<InventoryTransaction> qw = new LambdaQueryWrapper<>();
         if (serialNo != null && !serialNo.isEmpty()) qw.eq(InventoryTransaction::getSerialNo, serialNo);
         qw.orderByAsc(InventoryTransaction::getId);
-        return transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<InventoryTransaction> result = transactionMapper.selectPage(new Page<>(page, pageSize), qw);
+        fillTxNames(result.getRecords());
+        return result;
     }
 
     /** 锁库：占用可用库存（增加 reservedQty），创建锁库记录 */
@@ -375,7 +386,27 @@ public class InventoryService {
         LambdaQueryWrapper<InventoryReservation> qw = new LambdaQueryWrapper<>();
         if (status != null && !status.isEmpty()) qw.eq(InventoryReservation::getStatus, status);
         qw.orderByDesc(InventoryReservation::getId);
-        return reservationMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<InventoryReservation> result = reservationMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            List<Long> invIds = result.getRecords().stream().map(InventoryReservation::getInventoryId).collect(Collectors.toList());
+            List<Inventory> invs = inventoryMapper.selectList(new LambdaQueryWrapper<Inventory>().in(Inventory::getId, invIds));
+            Map<Long, Inventory> invMap = invs.stream().collect(Collectors.toMap(Inventory::getId, i -> i, (a, b) -> a));
+            List<Long> pids = invs.stream().filter(i -> "product".equals(i.getItemType())).map(Inventory::getItemId).collect(Collectors.toList());
+            List<Long> mids = invs.stream().filter(i -> !"product".equals(i.getItemType())).map(Inventory::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            result.getRecords().forEach(r -> {
+                Inventory inv = invMap.get(r.getInventoryId());
+                if (inv != null) {
+                    String[] arr = "product".equals(inv.getItemType()) ? pm.get(inv.getItemId()) : mm.get(inv.getItemId());
+                    if (arr != null) {
+                        r.setItemCode(arr[0]);
+                        r.setItemName(arr[1]);
+                    }
+                }
+            });
+        }
+        return result;
     }
 
     /** 事务提交后释放分布式锁 */
@@ -391,5 +422,47 @@ public class InventoryService {
         } else {
             redisTemplate.delete(lockKey);
         }
+    }
+
+    /** 填充库存行的物料/产品编码、名称、仓库名称 */
+    private void fillInvNames(List<Inventory> list) {
+        if (list == null || list.isEmpty()) return;
+        List<Long> pids = list.stream().filter(i -> "product".equals(i.getItemType()))
+                .map(Inventory::getItemId).collect(Collectors.toList());
+        List<Long> mids = list.stream().filter(i -> !"product".equals(i.getItemType()))
+                .map(Inventory::getItemId).collect(Collectors.toList());
+        Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+        Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+        Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                list.stream().map(Inventory::getWarehouseId).collect(Collectors.toList()));
+        list.forEach(i -> {
+            String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+            if (arr != null) {
+                i.setItemCode(arr[0]);
+                i.setItemName(arr[1]);
+            }
+            i.setWarehouseName(wm.get(i.getWarehouseId()));
+        });
+    }
+
+    /** 填充流水行的物料/产品编码、名称、仓库名称 */
+    private void fillTxNames(List<InventoryTransaction> list) {
+        if (list == null || list.isEmpty()) return;
+        List<Long> pids = list.stream().filter(t -> "product".equals(t.getItemType()))
+                .map(InventoryTransaction::getItemId).collect(Collectors.toList());
+        List<Long> mids = list.stream().filter(t -> !"product".equals(t.getItemType()))
+                .map(InventoryTransaction::getItemId).collect(Collectors.toList());
+        Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+        Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+        Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                list.stream().map(InventoryTransaction::getWarehouseId).collect(Collectors.toList()));
+        list.forEach(t -> {
+            String[] arr = "product".equals(t.getItemType()) ? pm.get(t.getItemId()) : mm.get(t.getItemId());
+            if (arr != null) {
+                t.setItemCode(arr[0]);
+                t.setItemName(arr[1]);
+            }
+            t.setWarehouseName(wm.get(t.getWarehouseId()));
+        });
     }
 }

@@ -16,6 +16,9 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class SalesInvoiceService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<SalesInvoice> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<SalesInvoice> qw = new LambdaQueryWrapper<>();
@@ -36,7 +40,13 @@ public class SalesInvoiceService {
             qw.eq(SalesInvoice::getApproveStatus, approveStatus);
         }
         qw.orderByDesc(SalesInvoice::getId);
-        return invoiceMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<SalesInvoice> result = invoiceMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> om = nameFillUtil.salesOrderNoMap(
+                    result.getRecords().stream().map(SalesInvoice::getOrderId).collect(Collectors.toList()));
+            result.getRecords().forEach(i -> i.setSourceOrderNo(om.get(i.getOrderId())));
+        }
+        return result;
     }
 
     @Transactional

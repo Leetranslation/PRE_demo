@@ -22,7 +22,8 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="designNo" label="设计单号" width="160" />
-      <el-table-column prop="productId" label="产品ID" width="90" />
+      <el-table-column prop="productCode" label="产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="productName" label="产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="row.status === 'finished' ? 'success' : 'warning'" size="small">

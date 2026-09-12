@@ -16,7 +16,8 @@
     </el-form>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
-      <el-table-column prop="itemId" label="物料/产品ID" width="120" />
+      <el-table-column prop="itemCode" label="物料/产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="itemName" label="物料/产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="itemType" label="类型" width="90">
         <template #default="{ row }">{{ row.itemType === 'material' ? '物料' : '产品' }}</template>
       </el-table-column>

@@ -29,8 +29,8 @@
       <el-table-column prop="itemType" label="类型" width="80">
         <template #default="{ row }">{{ row.itemType === 'material' ? '物料' : '产品' }}</template>
       </el-table-column>
-      <el-table-column prop="itemId" label="物料/产品ID" width="120" />
-      <el-table-column prop="warehouseId" label="仓库ID" width="100" />
+      <el-table-column prop="itemName" label="物料/产品" width="160" />
+      <el-table-column prop="warehouseName" label="仓库" width="120" />
       <el-table-column prop="batchNo" label="批次号" width="130" />
       <el-table-column prop="serialNo" label="序列号" min-width="160" />
       <el-table-column label="库存类型" width="100">

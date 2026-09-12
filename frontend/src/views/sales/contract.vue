@@ -23,7 +23,9 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="contractNo" label="合同号" width="160" />
-      <el-table-column prop="customerId" label="客户ID" width="90" />
+      <el-table-column prop="customerName" label="客户" width="140" />
+      <el-table-column prop="productCode" label="产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="productName" label="产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="contractDate" label="签订日期" width="110" />
       <el-table-column prop="amount" label="合同金额" width="120" align="right" />
       <el-table-column prop="salesman" label="业务员" width="100" />

@@ -10,19 +10,36 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class DesignCenterService {
 
     private final DesignCenterMapper designCenterMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<DesignCenter> page(long page, long pageSize, String keyword, String status) {
         LambdaQueryWrapper<DesignCenter> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) qw.like(DesignCenter::getDesignNo, keyword);
         if (StringUtils.hasText(status)) qw.eq(DesignCenter::getStatus, status);
         qw.orderByDesc(DesignCenter::getId);
-        return designCenterMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<DesignCenter> result = designCenterMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    result.getRecords().stream().map(DesignCenter::getProductId).collect(Collectors.toList()));
+            result.getRecords().forEach(d -> {
+                String[] arr = pm.get(d.getProductId());
+                if (arr != null) {
+                    d.setProductCode(arr[0]);
+                    d.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     @Transactional

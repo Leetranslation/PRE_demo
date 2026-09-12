@@ -17,6 +17,8 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class BomService {
     private final BomItemMapper bomItemMapper;
     private final BomVersionMapper bomVersionMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Bom> page(long page, long pageSize, String keyword, Integer status) {
         LambdaQueryWrapper<Bom> qw = new LambdaQueryWrapper<>();
@@ -37,15 +40,43 @@ public class BomService {
             qw.eq(Bom::getStatus, status);
         }
         qw.orderByDesc(Bom::getId);
-        return bomMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Bom> result = bomMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    result.getRecords().stream().map(Bom::getProductId).collect(Collectors.toList()));
+            result.getRecords().forEach(b -> {
+                String[] arr = pm.get(b.getProductId());
+                if (arr != null) {
+                    b.setProductCode(arr[0]);
+                    b.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     /** 查询 BOM 明细（含版本） */
     public List<BomItem> items(Long bomId) {
-        return bomItemMapper.selectList(
+        List<BomItem> list = bomItemMapper.selectList(
                 new LambdaQueryWrapper<BomItem>()
                         .eq(BomItem::getBomId, bomId)
                         .orderByAsc(BomItem::getSort));
+        if (!list.isEmpty()) {
+            List<Long> pids = list.stream().filter(i -> "product".equals(i.getChildType()))
+                    .map(BomItem::getChildId).collect(Collectors.toList());
+            List<Long> mids = list.stream().filter(i -> !"product".equals(i.getChildType()))
+                    .map(BomItem::getChildId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            list.forEach(i -> {
+                String[] arr = "product".equals(i.getChildType()) ? pm.get(i.getChildId()) : mm.get(i.getChildId());
+                if (arr != null) {
+                    i.setChildCode(arr[0]);
+                    i.setChildName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     public List<BomVersion> versions(Long bomId) {

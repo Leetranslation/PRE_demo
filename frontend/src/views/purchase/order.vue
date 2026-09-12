@@ -25,7 +25,9 @@
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="采购单号" width="200" />
-      <el-table-column prop="supplierId" label="供应商ID" min-width="120" />
+      <el-table-column prop="supplierName" label="供应商" min-width="160" />
+      <el-table-column prop="materialCode" label="物料编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="materialName" label="物料名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="orderDate" label="订单日期" width="140" />
       <el-table-column label="审批状态" width="120">
         <template #default="{ row }">
@@ -93,7 +95,7 @@
         <template #default="{ row }">
           <div class="material-cell">
             <template v-if="row.materialId">
-              <span class="material-name">{{ row.materialName }}</span>
+              <span class="material-name">{{ row.materialCode }} {{ row.materialName }}</span>
               <span class="material-spec">{{ row.spec }}</span>
             </template>
             <template v-else>
@@ -134,7 +136,9 @@
   <!-- 明细查看 -->
   <el-dialog v-model="itemsVisible" title="采购明细" width="760px">
     <el-table :data="items" border size="small">
-      <el-table-column prop="materialId" label="物料ID" width="100" />
+      <el-table-column label="物料" min-width="220">
+        <template #default="{ row }">{{ row.materialCode }} {{ row.materialName }}</template>
+      </el-table-column>
       <el-table-column prop="quantity" label="数量" width="120" />
       <el-table-column prop="price" label="含税单价" width="120" />
       <el-table-column prop="amountExTax" label="不含税金额" width="120" />
@@ -217,7 +221,9 @@ const warehouseLoading = ref(false)
 const { selection, onSelectionChange, handleExport } = useExport(
   [
     { prop: 'orderNo', label: '采购单号' },
-    { prop: 'supplierId', label: '供应商ID' },
+    { prop: 'supplierName', label: '供应商' },
+    { prop: 'materialCode', label: '物料编号' },
+    { prop: 'materialName', label: '物料名称' },
     { prop: 'orderDate', label: '订单日期' },
     { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },
     { prop: 'bizStatus', label: '业务状态', formatter: (row: any) => bizText(row.bizStatus) },
@@ -249,6 +255,7 @@ function openMaterialPicker(row: any) {
 function onMaterialSelected(material: any) {
   if (currentItemRow.value) {
     currentItemRow.value.materialId = material.id
+    currentItemRow.value.materialCode = material.code
     currentItemRow.value.materialName = material.name
     currentItemRow.value.spec = material.spec
     currentItemRow.value.unit = material.unit

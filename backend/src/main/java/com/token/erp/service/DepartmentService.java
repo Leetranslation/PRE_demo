@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -17,10 +19,20 @@ public class DepartmentService {
     private final DepartmentMapper departmentMapper;
 
     public List<Department> list() {
-        return departmentMapper.selectList(
+        List<Department> list = departmentMapper.selectList(
                 new LambdaQueryWrapper<Department>()
                         .orderByAsc(Department::getSort)
                         .orderByAsc(Department::getId));
+        if (!list.isEmpty()) {
+            Map<Long, String> nameMap = list.stream()
+                    .collect(Collectors.toMap(Department::getId, Department::getName, (a, b) -> a));
+            list.forEach(d -> {
+                if (d.getParentId() != null && d.getParentId() != 0L) {
+                    d.setParentName(nameMap.get(d.getParentId()));
+                }
+            });
+        }
+        return list;
     }
 
     public Department create(Department dept) {

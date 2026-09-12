@@ -15,6 +15,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,13 +25,20 @@ public class SalesStockingService {
     private final SalesStockingMapper stockingMapper;
     private final SalesStockingItemMapper itemMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<SalesStocking> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<SalesStocking> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) qw.like(SalesStocking::getStockingNo, keyword);
         if (StringUtils.hasText(approveStatus)) qw.eq(SalesStocking::getApproveStatus, approveStatus);
         qw.orderByDesc(SalesStocking::getId);
-        return stockingMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<SalesStocking> result = stockingMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> om = nameFillUtil.salesOrderNoMap(
+                    result.getRecords().stream().map(SalesStocking::getOrderId).collect(Collectors.toList()));
+            result.getRecords().forEach(s -> s.setSourceOrderNo(om.get(s.getOrderId())));
+        }
+        return result;
     }
 
     public List<SalesStockingItem> items(Long stockingId) {

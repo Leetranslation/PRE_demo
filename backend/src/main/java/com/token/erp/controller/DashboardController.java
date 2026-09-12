@@ -1,6 +1,7 @@
 package com.token.erp.controller;
 
 import com.token.erp.common.Result;
+import com.token.erp.dto.CockpitStats;
 import com.token.erp.dto.DashboardStats;
 import com.token.erp.service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -18,5 +19,10 @@ public class DashboardController {
     @GetMapping("/stats")
     public Result<DashboardStats> stats() {
         return Result.success(dashboardService.stats());
+    }
+
+    @GetMapping("/cockpit")
+    public Result<CockpitStats> cockpit() {
+        return Result.success(dashboardService.cockpit());
     }
 }

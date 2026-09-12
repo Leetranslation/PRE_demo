@@ -1,5 +1,6 @@
 package com.token.erp.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.token.erp.common.BaseEntity;
 import lombok.Data;
@@ -15,4 +16,8 @@ public class Department extends BaseEntity {
     private Integer sort;
     private Integer status;
     private String remark;
+
+    /** 上级部门名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String parentName;
 }

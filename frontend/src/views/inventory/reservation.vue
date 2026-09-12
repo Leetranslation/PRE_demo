@@ -18,7 +18,8 @@
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
-      <el-table-column prop="inventoryId" label="库存ID" width="90" />
+      <el-table-column prop="itemCode" label="物料/产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="itemName" label="物料/产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="bizType" label="业务类型" width="140" />
       <el-table-column prop="bizNo" label="业务单号" width="160" />
       <el-table-column prop="quantity" label="锁定数量" width="110" align="right" />

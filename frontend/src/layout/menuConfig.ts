@@ -9,6 +9,8 @@ import {
   Coin,
   CircleCheck,
   User,
+  Connection,
+  Odometer,
   type Component
 } from '@element-plus/icons-vue'
 
@@ -48,6 +50,12 @@ export const topMenus: TopMenu[] = [
     title: '首页',
     icon: HomeFilled,
     path: '/dashboard'
+  },
+  {
+    key: 'cockpit',
+    title: '驾驶舱',
+    icon: Odometer,
+    path: '/cockpit'
   },
   {
     key: 'base',
@@ -236,6 +244,21 @@ export const topMenus: TopMenu[] = [
           { path: '/quality/index', title: '质量检验' },
           { path: '/quality/apply', title: '质检申请单' },
           { path: '/quality/base', title: '检验方法/方案' }
+        ]
+      }
+    ]
+  },
+  {
+    key: 'outsource',
+    title: '外协管理',
+    icon: Connection,
+    groups: [
+      {
+        groupTitle: '外协单据',
+        items: [
+          { path: '/outsource/order', title: '外协单' },
+          { path: '/outsource/issue', title: '外协领料' },
+          { path: '/outsource/inbound', title: '外协入库' }
         ]
       }
     ]

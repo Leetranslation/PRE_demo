@@ -32,7 +32,7 @@
         <template #default="{ row }">{{ sourceText(row.sourceType) }}</template>
       </el-table-column>
       <el-table-column prop="sourceNo" label="来源单号" width="150" />
-      <el-table-column prop="itemId" label="物料/产品ID" width="120" />
+      <el-table-column prop="itemName" label="物料/产品" width="160" />
       <el-table-column prop="quantity" label="质检数量" width="100" align="right" />
       <el-table-column prop="applyDate" label="申请日期" width="110" />
       <el-table-column label="状态" width="100">

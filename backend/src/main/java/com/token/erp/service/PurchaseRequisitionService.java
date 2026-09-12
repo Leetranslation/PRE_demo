@@ -16,6 +16,9 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class PurchaseRequisitionService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseRequisition> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<PurchaseRequisition> qw = new LambdaQueryWrapper<>();
@@ -39,9 +43,21 @@ public class PurchaseRequisitionService {
         return requisitionMapper.selectPage(new Page<>(page, pageSize), qw);
     }
 
-    public java.util.List<PurchaseRequisitionItem> items(Long requisitionId) {
-        return itemMapper.selectList(
+    public List<PurchaseRequisitionItem> items(Long requisitionId) {
+        List<PurchaseRequisitionItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<PurchaseRequisitionItem>().eq(PurchaseRequisitionItem::getRequisitionId, requisitionId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(PurchaseRequisitionItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

@@ -12,7 +12,9 @@ import java.time.LocalDate;
 @TableName("material_issue")
 public class MaterialIssue extends BaseEntity {
     private String issueNo;
+    private String issueType;
     private Long orderId;
+    private Long outsourceId;
     private Long warehouseId;
     private LocalDate issueDate;
     private String status;

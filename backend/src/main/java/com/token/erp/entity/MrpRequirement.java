@@ -2,6 +2,7 @@ package com.token.erp.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -32,4 +33,10 @@ public class MrpRequirement implements Serializable {
     private BigDecimal convertedQty;
     private String convertedStatus;
     private LocalDateTime createTime;
+
+    /** 物料/产品编码、名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String itemCode;
+    @TableField(exist = false)
+    private String itemName;
 }

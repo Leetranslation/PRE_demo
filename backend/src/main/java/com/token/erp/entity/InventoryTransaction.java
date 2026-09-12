@@ -2,6 +2,7 @@ package com.token.erp.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -30,4 +31,12 @@ public class InventoryTransaction implements Serializable {
     private String bizNo;
     private String createBy;
     private LocalDateTime createTime;
+
+    /** 物料/产品编码、名称、仓库名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String itemCode;
+    @TableField(exist = false)
+    private String itemName;
+    @TableField(exist = false)
+    private String warehouseName;
 }

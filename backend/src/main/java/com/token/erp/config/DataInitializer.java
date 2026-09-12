@@ -187,6 +187,11 @@ public class DataInitializer implements CommandLineRunner {
             {"quality:judge", "质检判定", "button", null},
             {"quality:base", "检验方法/方案", "menu", "/quality/base"},
             {"quality:base:create", "检验基础新增", "button", null},
+            // 外协 - 菜单 + 操作
+            {"outsource:order", "外协单", "menu", "/outsource/order"},
+            {"outsource:order:create", "外协单新增/编辑", "button", null},
+            {"outsource:order:approve", "外协单审批/反审核", "button", null},
+            {"outsource:order:start", "外协单开始/完工/作废", "button", null},
             // 系统管理 - 菜单
             {"system:user", "用户管理", "menu", "/system/user"},
             {"system:role", "角色管理", "menu", "/system/role"},

@@ -9,7 +9,7 @@
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="code" label="部门编码" width="150" />
       <el-table-column prop="name" label="部门名称" width="180" />
-      <el-table-column prop="parentId" label="上级部门ID" width="120" />
+      <el-table-column prop="parentName" label="上级部门" width="140" />
       <el-table-column prop="sort" label="排序" width="80" />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">

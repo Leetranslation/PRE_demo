@@ -22,7 +22,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
-      <el-table-column prop="warehouseId" label="仓库ID" width="100" />
+      <el-table-column prop="warehouseName" label="仓库" width="140" />
       <el-table-column prop="code" label="库位编号" width="160" />
       <el-table-column prop="name" label="库位名称" min-width="160" />
       <el-table-column label="状态" width="90">

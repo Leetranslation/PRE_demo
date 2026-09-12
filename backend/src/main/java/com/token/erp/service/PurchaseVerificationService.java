@@ -17,6 +17,8 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,13 +29,20 @@ public class PurchaseVerificationService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseVerification> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<PurchaseVerification> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) qw.like(PurchaseVerification::getVerificationNo, keyword);
         if (StringUtils.hasText(approveStatus)) qw.eq(PurchaseVerification::getApproveStatus, approveStatus);
         qw.orderByDesc(PurchaseVerification::getId);
-        return verificationMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<PurchaseVerification> result = verificationMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> im = nameFillUtil.purchaseInvoiceNoMap(
+                    result.getRecords().stream().map(PurchaseVerification::getInvoiceId).collect(Collectors.toList()));
+            result.getRecords().forEach(v -> v.setInvoiceNo(im.get(v.getInvoiceId())));
+        }
+        return result;
     }
 
     @Transactional

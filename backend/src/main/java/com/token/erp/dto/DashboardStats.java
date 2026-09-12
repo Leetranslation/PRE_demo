@@ -33,5 +33,7 @@ public class DashboardStats {
         private String itemType;
         private BigDecimal quantity;
         private BigDecimal safetyStock;
+        private String itemCode;
+        private String itemName;
     }
 }

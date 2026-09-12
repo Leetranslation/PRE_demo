@@ -23,7 +23,9 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="quotationNo" label="报价单号" width="160" />
-      <el-table-column prop="customerId" label="客户ID" width="90" />
+      <el-table-column prop="customerName" label="客户" width="140" />
+      <el-table-column prop="productCode" label="产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="productName" label="产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="quoteDate" label="报价日期" width="110" />
       <el-table-column prop="salesman" label="业务员" width="100" />
       <el-table-column prop="totalAmount" label="价税合计" width="120" align="right" />

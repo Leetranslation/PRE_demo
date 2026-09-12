@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存调拨：源仓库出库 + 目标仓库入库（同物调仓）
@@ -31,18 +33,45 @@ public class TransferService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Transfer> page(long page, long pageSize, Long sourceWarehouseId, Long targetWarehouseId) {
         LambdaQueryWrapper<Transfer> qw = new LambdaQueryWrapper<>();
         if (sourceWarehouseId != null) qw.eq(Transfer::getSourceWarehouseId, sourceWarehouseId);
         if (targetWarehouseId != null) qw.eq(Transfer::getTargetWarehouseId, targetWarehouseId);
         qw.orderByDesc(Transfer::getId);
-        return transferMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Transfer> result = transferMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                    result.getRecords().stream().flatMap(t -> java.util.stream.Stream.of(t.getSourceWarehouseId(), t.getTargetWarehouseId()))
+                            .collect(Collectors.toList()));
+            result.getRecords().forEach(t -> {
+                t.setSourceWarehouseName(wm.get(t.getSourceWarehouseId()));
+                t.setTargetWarehouseName(wm.get(t.getTargetWarehouseId()));
+            });
+        }
+        return result;
     }
 
     public List<TransferItem> items(Long transferId) {
-        return transferItemMapper.selectList(
+        List<TransferItem> list = transferItemMapper.selectList(
                 new LambdaQueryWrapper<TransferItem>().eq(TransferItem::getTransferId, transferId));
+        if (!list.isEmpty()) {
+            List<Long> pids = list.stream().filter(i -> "product".equals(i.getItemType()))
+                    .map(TransferItem::getItemId).collect(Collectors.toList());
+            List<Long> mids = list.stream().filter(i -> !"product".equals(i.getItemType()))
+                    .map(TransferItem::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            list.forEach(i -> {
+                String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+                if (arr != null) {
+                    i.setItemCode(arr[0]);
+                    i.setItemName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     /** 创建调拨单并执行库存变动（源出 + 目标入） */

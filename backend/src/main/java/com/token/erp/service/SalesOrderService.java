@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,7 @@ public class SalesOrderService {
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<SalesOrder> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<SalesOrder> qw = new LambdaQueryWrapper<>();
@@ -39,12 +42,51 @@ public class SalesOrderService {
             qw.eq(SalesOrder::getApproveStatus, approveStatus);
         }
         qw.orderByDesc(SalesOrder::getId);
-        return orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<SalesOrder> result = orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> cm = nameFillUtil.customerNameMap(
+                    result.getRecords().stream().map(SalesOrder::getCustomerId).collect(Collectors.toList()));
+            result.getRecords().forEach(o -> o.setCustomerName(cm.get(o.getCustomerId())));
+
+            // 产品摘要：每单首个产品「编号 名称」，多品种时加「等N种」
+            List<Long> orderIds = result.getRecords().stream().map(SalesOrder::getId).collect(Collectors.toList());
+            List<SalesOrderItem> allItems = itemMapper.selectList(
+                    new LambdaQueryWrapper<SalesOrderItem>()
+                            .in(SalesOrderItem::getOrderId, orderIds)
+                            .orderByAsc(SalesOrderItem::getId));
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    allItems.stream().map(SalesOrderItem::getProductId).distinct().collect(Collectors.toList()));
+            Map<Long, List<SalesOrderItem>> grouped = allItems.stream()
+                    .collect(Collectors.groupingBy(SalesOrderItem::getOrderId));
+            result.getRecords().forEach(o -> {
+                List<SalesOrderItem> its = grouped.get(o.getId());
+                if (its == null || its.isEmpty()) return;
+                String[] arr = pm.get(its.get(0).getProductId());
+                long kinds = its.stream().map(SalesOrderItem::getProductId).distinct().count();
+                if (arr != null) {
+                    o.setProductCode(arr[0] + (kinds > 1 ? " 等" + kinds + "种" : ""));
+                    o.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     public List<SalesOrderItem> items(Long orderId) {
-        return itemMapper.selectList(
+        List<SalesOrderItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, orderId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    list.stream().map(SalesOrderItem::getProductId).collect(Collectors.toList()));
+            list.forEach(it -> {
+                String[] arr = pm.get(it.getProductId());
+                if (arr != null) {
+                    it.setProductCode(arr[0]);
+                    it.setProductName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

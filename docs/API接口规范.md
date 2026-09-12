@@ -510,3 +510,33 @@ public class ProcessController {
 | POST | `/api/inventory/warning/generatePurchase` | 物料预警生成采购申请单 | inventory:reserve |
 | POST | `/api/inventory/warning/generateWorkOrder` | 产品预警生成生产工单 | inventory:reserve |
 | GET | `/api/production/order/list?orderType=semi` | 半成品加工单（复用生产工单） | production:semi |
+
+### 阶段5：外协单（OutsourceOrderController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/outsource/order/list` | 分页查询外协单 | outsource:order |
+| GET | `/api/outsource/order/items` | 查询外协单明细 | outsource:order |
+| POST | `/api/outsource/order/create` | 新增外协单（整单/工序） | outsource:order:create |
+| POST | `/api/outsource/order/update` | 编辑外协单 | outsource:order:create |
+| POST | `/api/outsource/order/submit` | 提交审批 | outsource:order:create |
+| POST | `/api/outsource/order/approve` | 审批通过 | outsource:order:approve |
+| POST | `/api/outsource/order/unapprove` | 反审核 | outsource:order:approve |
+| POST | `/api/outsource/order/start` | 开始外协 | outsource:order:start |
+| POST | `/api/outsource/order/finish` | 外协完工 | outsource:order:start |
+| POST | `/api/outsource/order/void` | 作废 | outsource:order:start |
+
+### 阶段5：外协领料/入库（复用已有接口）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| POST | `/api/production/issue/create` | 领料（`issueType`：production/outsource_whole/outsource_process，外协时带 `outsourceId`） | production:issue:create |
+| GET | `/api/production/issue/list` | 领料单列表（新增 `issueType` 参数，默认 production） | production:issue |
+| POST | `/api/production/inbound/create` | 入库（`inboundType`：production/outsource_whole/outsource_process，外协时带 `outsourceId`） | production:inbound:create |
+| GET | `/api/production/inbound/list` | 入库单列表（新增 `inboundType` 参数，默认 production） | production:inbound |
+
+### 阶段5：驾驶舱（DashboardController 扩展）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/dashboard/cockpit` | 驾驶舱统计（9 KPI + 待办中心 + 图表） | 登录即可 |

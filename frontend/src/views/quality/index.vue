@@ -17,8 +17,8 @@
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="inspectionNo" label="质检单号" width="170" />
-      <el-table-column prop="itemId" label="物料/产品ID" min-width="140" />
-      <el-table-column prop="warehouseId" label="仓库ID" width="100" />
+      <el-table-column prop="itemName" label="物料/产品" min-width="160" />
+      <el-table-column prop="warehouseName" label="仓库" width="120" />
       <el-table-column prop="quantity" label="质检数量" width="110" align="right" />
       <el-table-column prop="inspectionDate" label="质检日期" width="120" />
       <el-table-column label="结果" width="100">

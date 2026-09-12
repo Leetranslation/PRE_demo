@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,7 @@ public class PurchaseInquiryService {
     private final SecurityUtils securityUtils;
     private final PurchaseOrderService purchaseOrderService;
     private final PurchaseOrderMapper purchaseOrderMapper;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseInquiry> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<PurchaseInquiry> qw = new LambdaQueryWrapper<>();
@@ -50,8 +52,23 @@ public class PurchaseInquiryService {
     }
 
     public List<PurchaseInquiryItem> items(Long inquiryId) {
-        return itemMapper.selectList(
+        List<PurchaseInquiryItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<PurchaseInquiryItem>().eq(PurchaseInquiryItem::getInquiryId, inquiryId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(PurchaseInquiryItem::getMaterialId).collect(Collectors.toList()));
+            Map<Long, String> sm = nameFillUtil.supplierNameMap(
+                    list.stream().map(PurchaseInquiryItem::getSupplierId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = mm.get(i.getMaterialId());
+                if (arr != null) {
+                    i.setMaterialCode(arr[0]);
+                    i.setMaterialName(arr[1]);
+                }
+                i.setSupplierName(sm.get(i.getSupplierId()));
+            });
+        }
+        return list;
     }
 
     @Transactional

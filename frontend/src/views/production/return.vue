@@ -2,7 +2,7 @@
   <DocList :columns="columns" :fetch-list="fetchList" :fetch-items="fetchItems" filename="退料单" @detail="showDetail" />
   <el-dialog v-model="detailVisible" title="退料明细" width="620px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="materialId" label="物料ID" width="110" />
+      <el-table-column prop="materialName" label="物料" width="140" />
       <el-table-column prop="quantity" label="数量" width="120" align="right" />
       <el-table-column prop="unit" label="单位" width="90" />
     </el-table>

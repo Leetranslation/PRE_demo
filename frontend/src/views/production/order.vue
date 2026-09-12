@@ -25,7 +25,8 @@
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="工单号" width="170" />
-      <el-table-column prop="productId" label="产品ID" width="90" />
+      <el-table-column prop="productCode" label="产品编号" width="150" show-overflow-tooltip />
+      <el-table-column prop="productName" label="产品名称" min-width="140" show-overflow-tooltip />
       <el-table-column label="车间" width="110">
         <template #default="{ row }">{{ workshopName(row.workshopId) }}</template>
       </el-table-column>
@@ -302,7 +303,8 @@ async function searchWarehouse(keyword: string) {
 const { selection, onSelectionChange, handleExport } = useExport(
   [
     { prop: 'orderNo', label: '工单号' },
-    { prop: 'productId', label: '产品ID' },
+    { prop: 'productCode', label: '产品编号' },
+    { prop: 'productName', label: '产品名称' },
     { prop: 'quantity', label: '生产数量' },
     { prop: 'completedQty', label: '已完成' },
     { prop: 'approveStatus', label: '审批状态', formatter: (row: any) => approveText(row.approveStatus) },

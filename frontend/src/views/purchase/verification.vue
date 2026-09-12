@@ -23,7 +23,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="verificationNo" label="核销单号" width="160" />
-      <el-table-column prop="invoiceId" label="发票ID" width="90" />
+      <el-table-column prop="invoiceNo" label="发票号" width="160" />
       <el-table-column prop="amount" label="核销金额" width="120" align="right" />
       <el-table-column prop="verifyDate" label="核销日期" width="110" />
       <el-table-column label="审批状态" width="100">

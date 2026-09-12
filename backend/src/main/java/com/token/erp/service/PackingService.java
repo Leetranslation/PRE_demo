@@ -15,6 +15,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,13 +25,20 @@ public class PackingService {
     private final PackingMapper packingMapper;
     private final PackingItemMapper itemMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Packing> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<Packing> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) qw.like(Packing::getPackingNo, keyword);
         if (StringUtils.hasText(approveStatus)) qw.eq(Packing::getApproveStatus, approveStatus);
         qw.orderByDesc(Packing::getId);
-        return packingMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Packing> result = packingMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> om = nameFillUtil.salesOutboundNoMap(
+                    result.getRecords().stream().map(Packing::getOutboundId).collect(Collectors.toList()));
+            result.getRecords().forEach(p -> p.setOutboundNo(om.get(p.getOutboundId())));
+        }
+        return result;
     }
 
     public List<PackingItem> items(Long packingId) {

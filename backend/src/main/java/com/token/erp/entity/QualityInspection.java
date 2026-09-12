@@ -1,5 +1,6 @@
 package com.token.erp.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.token.erp.common.BaseEntity;
 import lombok.Data;
@@ -23,4 +24,12 @@ public class QualityInspection extends BaseEntity {
     private LocalDate inspectionDate;
     private String result;
     private String remark;
+
+    /** 物料/产品编码、名称、仓库名称（冗余展示字段） */
+    @TableField(exist = false)
+    private String itemCode;
+    @TableField(exist = false)
+    private String itemName;
+    @TableField(exist = false)
+    private String warehouseName;
 }

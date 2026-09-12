@@ -25,8 +25,9 @@ public class MaterialIssueController {
     public Result<PageResult<MaterialIssue>> list(
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long pageSize,
-            @RequestParam(required = false) Long orderId) {
-        return Result.success(PageResult.of(issueService.page(page, pageSize, orderId)));
+            @RequestParam(required = false) Long orderId,
+            @RequestParam(required = false) String issueType) {
+        return Result.success(PageResult.of(issueService.page(page, pageSize, orderId, issueType)));
     }
 
     @GetMapping("/items")

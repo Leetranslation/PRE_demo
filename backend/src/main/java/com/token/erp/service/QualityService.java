@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class QualityService {
     private final QcApplyMapper qcApplyMapper;
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     public Page<QualityInspection> page(long page, long pageSize, String result) {
         LambdaQueryWrapper<QualityInspection> qw = new LambdaQueryWrapper<>();
@@ -33,7 +37,27 @@ public class QualityService {
             qw.eq(QualityInspection::getResult, result);
         }
         qw.orderByDesc(QualityInspection::getId);
-        return inspectionMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<QualityInspection> pageResult = inspectionMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!pageResult.getRecords().isEmpty()) {
+            List<QualityInspection> records = pageResult.getRecords();
+            List<Long> pids = records.stream().filter(i -> "product".equals(i.getItemType()))
+                    .map(QualityInspection::getItemId).collect(Collectors.toList());
+            List<Long> mids = records.stream().filter(i -> !"product".equals(i.getItemType()))
+                    .map(QualityInspection::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            Map<Long, String> wm = nameFillUtil.warehouseNameMap(
+                    records.stream().map(QualityInspection::getWarehouseId).collect(Collectors.toList()));
+            records.forEach(i -> {
+                String[] arr = "product".equals(i.getItemType()) ? pm.get(i.getItemId()) : mm.get(i.getItemId());
+                if (arr != null) {
+                    i.setItemCode(arr[0]);
+                    i.setItemName(arr[1]);
+                }
+                i.setWarehouseName(wm.get(i.getWarehouseId()));
+            });
+        }
+        return pageResult;
     }
 
     /** 创建质检单（针对待检库存的物料） */

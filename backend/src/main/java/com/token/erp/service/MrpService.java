@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * MRP 核心服务
@@ -40,6 +41,7 @@ public class MrpService {
     private final PurchaseOrderItemMapper purchaseOrderItemMapper;
     private final ProductionOrderMapper productionOrderMapper;
     private final CodeGenerator codeGenerator;
+    private final NameFillUtil nameFillUtil;
 
     /** 计算中的需求聚合项 */
     private static class Demand {
@@ -305,10 +307,26 @@ public class MrpService {
 
     /** 查询计划建议列表 */
     public List<MrpRequirement> requirements(Long planId) {
-        return requirementMapper.selectList(
+        List<MrpRequirement> list = requirementMapper.selectList(
                 new LambdaQueryWrapper<MrpRequirement>()
                         .eq(MrpRequirement::getPlanId, planId)
                         .orderByDesc(MrpRequirement::getId));
+        if (!list.isEmpty()) {
+            List<Long> pids = list.stream().filter(r -> "product".equals(r.getItemType()))
+                    .map(MrpRequirement::getItemId).collect(Collectors.toList());
+            List<Long> mids = list.stream().filter(r -> !"product".equals(r.getItemType()))
+                    .map(MrpRequirement::getItemId).collect(Collectors.toList());
+            Map<Long, String[]> pm = nameFillUtil.productMap(pids);
+            Map<Long, String[]> mm = nameFillUtil.materialMap(mids);
+            list.forEach(r -> {
+                String[] arr = "product".equals(r.getItemType()) ? pm.get(r.getItemId()) : mm.get(r.getItemId());
+                if (arr != null) {
+                    r.setItemCode(arr[0]);
+                    r.setItemName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     /** 查询计划列表 */

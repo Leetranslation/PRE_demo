@@ -122,7 +122,7 @@
   <el-dialog v-model="itemsVisible" title="BOM 明细" width="760px">
     <el-table :data="items" border size="small">
       <el-table-column prop="childType" label="类型" width="100" />
-      <el-table-column prop="childId" label="子项ID" width="100" />
+      <el-table-column prop="childName" label="子项" width="140" />
       <el-table-column prop="quantity" label="数量" width="120" />
       <el-table-column prop="unit" label="单位" width="90" />
       <el-table-column prop="lossRate" label="损耗率" width="100" />

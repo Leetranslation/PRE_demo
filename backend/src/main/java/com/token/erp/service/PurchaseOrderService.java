@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,7 @@ public class PurchaseOrderService {
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<PurchaseOrder> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
@@ -39,12 +42,51 @@ public class PurchaseOrderService {
             qw.eq(PurchaseOrder::getApproveStatus, approveStatus);
         }
         qw.orderByDesc(PurchaseOrder::getId);
-        return orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<PurchaseOrder> result = orderMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            Map<Long, String> sm = nameFillUtil.supplierNameMap(
+                    result.getRecords().stream().map(PurchaseOrder::getSupplierId).collect(Collectors.toList()));
+            result.getRecords().forEach(o -> o.setSupplierName(sm.get(o.getSupplierId())));
+
+            // 物料摘要：每单首个物料「编号 名称」，多种类时加「等N种」
+            List<Long> orderIds = result.getRecords().stream().map(PurchaseOrder::getId).collect(Collectors.toList());
+            List<PurchaseOrderItem> allItems = itemMapper.selectList(
+                    new LambdaQueryWrapper<PurchaseOrderItem>()
+                            .in(PurchaseOrderItem::getOrderId, orderIds)
+                            .orderByAsc(PurchaseOrderItem::getId));
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    allItems.stream().map(PurchaseOrderItem::getMaterialId).distinct().collect(Collectors.toList()));
+            Map<Long, List<PurchaseOrderItem>> grouped = allItems.stream()
+                    .collect(Collectors.groupingBy(PurchaseOrderItem::getOrderId));
+            result.getRecords().forEach(o -> {
+                List<PurchaseOrderItem> its = grouped.get(o.getId());
+                if (its == null || its.isEmpty()) return;
+                String[] arr = mm.get(its.get(0).getMaterialId());
+                long kinds = its.stream().map(PurchaseOrderItem::getMaterialId).distinct().count();
+                if (arr != null) {
+                    o.setMaterialCode(arr[0] + (kinds > 1 ? " 等" + kinds + "种" : ""));
+                    o.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     public List<PurchaseOrderItem> items(Long orderId) {
-        return itemMapper.selectList(
+        List<PurchaseOrderItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<PurchaseOrderItem>().eq(PurchaseOrderItem::getOrderId, orderId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> mm = nameFillUtil.materialMap(
+                    list.stream().map(PurchaseOrderItem::getMaterialId).collect(Collectors.toList()));
+            list.forEach(it -> {
+                String[] arr = mm.get(it.getMaterialId());
+                if (arr != null) {
+                    it.setMaterialCode(arr[0]);
+                    it.setMaterialName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

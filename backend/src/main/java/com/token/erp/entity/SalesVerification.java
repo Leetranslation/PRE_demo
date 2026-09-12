@@ -1,5 +1,6 @@
 package com.token.erp.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.token.erp.common.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,4 +29,8 @@ public class SalesVerification extends BaseEntity {
     private String approveStatus;
     @Schema(description = "备注")
     private String remark;
+
+    /** 销售发票号（冗余展示字段） */
+    @TableField(exist = false)
+    private String invoiceNo;
 }

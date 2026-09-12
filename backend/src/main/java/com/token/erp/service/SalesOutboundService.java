@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 销售出库服务
@@ -31,6 +34,7 @@ public class SalesOutboundService {
     private final InventoryService inventoryService;
     private final CodeGenerator codeGenerator;
     private final IdempotencyService idempotencyService;
+    private final NameFillUtil nameFillUtil;
 
     public Page<SalesOutbound> page(long page, long pageSize, Long orderId) {
         LambdaQueryWrapper<SalesOutbound> qw = new LambdaQueryWrapper<>();
@@ -40,9 +44,21 @@ public class SalesOutboundService {
     }
 
     /** 出库单明细 */
-    public java.util.List<SalesOutboundItem> items(Long outboundId) {
-        return outboundItemMapper.selectList(
+    public List<SalesOutboundItem> items(Long outboundId) {
+        List<SalesOutboundItem> list = outboundItemMapper.selectList(
                 new LambdaQueryWrapper<SalesOutboundItem>().eq(SalesOutboundItem::getOutboundId, outboundId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    list.stream().map(SalesOutboundItem::getProductId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                String[] arr = pm.get(i.getProductId());
+                if (arr != null) {
+                    i.setProductCode(arr[0]);
+                    i.setProductName(arr[1]);
+                }
+            });
+        }
+        return list;
     }
 
     @Transactional

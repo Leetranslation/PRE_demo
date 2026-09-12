@@ -22,6 +22,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class QuotationService {
     private final CodeGenerator codeGenerator;
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
+    private final NameFillUtil nameFillUtil;
 
     public Page<Quotation> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<Quotation> qw = new LambdaQueryWrapper<>();
@@ -43,7 +46,29 @@ public class QuotationService {
             qw.eq(Quotation::getApproveStatus, approveStatus);
         }
         qw.orderByDesc(Quotation::getId);
-        return quotationMapper.selectPage(new Page<>(page, pageSize), qw);
+        Page<Quotation> result = quotationMapper.selectPage(new Page<>(page, pageSize), qw);
+        if (!result.getRecords().isEmpty()) {
+            List<Long> qids = result.getRecords().stream().map(Quotation::getId).collect(Collectors.toList());
+            List<QuotationItem> allItems = itemMapper.selectList(
+                    new LambdaQueryWrapper<QuotationItem>()
+                            .in(QuotationItem::getQuotationId, qids)
+                            .orderByAsc(QuotationItem::getId));
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    allItems.stream().map(QuotationItem::getProductId).distinct().collect(Collectors.toList()));
+            Map<Long, List<QuotationItem>> grouped = allItems.stream()
+                    .collect(Collectors.groupingBy(QuotationItem::getQuotationId));
+            result.getRecords().forEach(q -> {
+                List<QuotationItem> its = grouped.get(q.getId());
+                if (its == null || its.isEmpty()) return;
+                String[] arr = pm.get(its.get(0).getProductId());
+                long kinds = its.stream().map(QuotationItem::getProductId).distinct().count();
+                if (arr != null) {
+                    q.setProductCode(arr[0] + (kinds > 1 ? " 等" + kinds + "种" : ""));
+                    q.setProductName(arr[1]);
+                }
+            });
+        }
+        return result;
     }
 
     public List<QuotationItem> items(Long quotationId) {

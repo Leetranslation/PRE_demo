@@ -18,7 +18,7 @@
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
       <el-table-column prop="returnNo" label="退货单号" width="160" />
-      <el-table-column prop="orderId" label="订单ID" width="90" />
+      <el-table-column prop="sourceOrderNo" label="销售订单号" width="160" />
       <el-table-column prop="returnDate" label="退货日期" width="110" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
       <el-table-column label="操作" width="100" fixed="right">
@@ -79,7 +79,7 @@
 
   <el-dialog v-model="detailVisible" title="退货明细" width="560px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="productId" label="产品ID" width="90" />
+      <el-table-column prop="productName" label="产品" width="140" />
       <el-table-column prop="quantity" label="退货数量" width="110" align="right" />
     </el-table>
   </el-dialog>
