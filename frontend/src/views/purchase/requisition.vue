@@ -31,12 +31,13 @@
         </template>
       </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="260" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="submit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="approve(row)">审批</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="danger" @click="unapprove(row)">反审核</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -101,6 +102,16 @@
   </el-dialog>
 
   <MaterialPicker v-model="materialPickerVisible" @select="onMaterialSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="采购申请单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['申请人', '审批人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -109,6 +120,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { purchaseRequisitionList, purchaseRequisitionCreate, purchaseRequisitionSubmit, purchaseRequisitionApprove, purchaseRequisitionUnapprove, purchaseRequisitionItems } from '@/api/purchase'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -172,6 +184,28 @@ async function unapprove(row: any) {
 async function viewItems(row: any) {
   detailItems.value = await purchaseRequisitionItems(row.id)
   detailVisible.value = true
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料', prop: 'materialName' },
+  { label: '需求数量', prop: 'quantity', align: 'right' },
+  { label: '需求日期', prop: 'requiredDate' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await purchaseRequisitionItems(row.id)
+  printHead.value = [
+    [{ label: '申请单号', value: row.requisitionNo }, { label: '申请日期', value: row.requisitionDate }],
+    [{ label: '申请人', value: row.applicant }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

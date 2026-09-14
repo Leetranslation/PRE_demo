@@ -38,9 +38,10 @@
       <el-table-column prop="type" label="类型" width="90" />
       <el-table-column prop="stockDate" label="日期" width="110" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -112,6 +113,16 @@
   </el-dialog>
 
   <MaterialPicker v-model="pickerVisible" @select="onSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="其他出入库单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['制单人', '仓管员', '审核人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -121,6 +132,8 @@ import { ElMessage } from 'element-plus'
 import { otherStockList, otherStockCreate } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -178,6 +191,28 @@ async function handleSave() {
 
 function viewItems(row: any) {
   ElMessage.info('明细：' + row.stockNo)
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料/产品', prop: 'itemName' },
+  { label: '数量', prop: 'quantity', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  const res: any = await request.get('/inventory/otherStock/items', { params: { stockId: row.id } })
+  printRows.value = res || []
+  printHead.value = [
+    [{ label: '单号', value: row.stockNo }, { label: '日期', value: row.stockDate }],
+    [{ label: '方向', value: row.direction === 'in' ? '入库' : '出库' }, { label: '类型', value: row.type }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

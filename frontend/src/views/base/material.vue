@@ -74,7 +74,11 @@
           <el-form-item label="分类" required><el-input v-model="form.category" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="单位" required><el-input v-model="form.unit" placeholder="如：个/公斤" /></el-form-item>
+          <el-form-item label="单位" required>
+            <el-select v-model="form.unitId" filterable placeholder="选择单位" style="width: 100%" @change="onUnitChange">
+              <el-option v-for="u in units" :key="u.id" :label="u.name" :value="u.id" />
+            </el-select>
+          </el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="规格"><el-input v-model="form.spec" /></el-form-item>
@@ -98,10 +102,20 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
+          <el-form-item label="序列号规则">
+            <el-select v-model="form.serialRuleId" clearable filterable placeholder="启用序列号时可选" style="width: 100%">
+              <el-option v-for="r in serialRules" :key="r.id" :label="r.name" :value="r.id" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
           <el-form-item label="安全库存"><el-input v-model="form.safetyStock" placeholder="安全库存" /></el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="采购提前期(天)"><el-input v-model="form.purchaseLeadDays" placeholder="采购提前期(天)" /></el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="标准成本"><el-input v-model="form.standardCost" placeholder="标准成本单价（成本核算用）" /></el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="采购质检">
@@ -129,7 +143,7 @@
 defineOptions({ name: 'Material' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { materialList, materialCreate, materialUpdate, materialStatus } from '@/api/base'
+import { materialList, materialCreate, materialUpdate, materialStatus, unitList, serialRuleList } from '@/api/base'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
@@ -138,6 +152,8 @@ const total = ref(0)
 const dialogVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: undefined as number | undefined })
 const form = reactive<any>({})
+const units = ref<any[]>([])
+const serialRules = ref<any[]>([])
 
 const { selection, onSelectionChange, handleExport } = useExport(
   [
@@ -159,6 +175,21 @@ function batchText(v: string) {
   return { none: '不管理', batch: '批次', serial: '序列号' }[v] || v
 }
 
+async function loadUnits() {
+  const res = await unitList({ page: 1, pageSize: 100 })
+  units.value = res.records
+}
+
+async function loadSerialRules() {
+  const res = await serialRuleList({ page: 1, pageSize: 100 })
+  serialRules.value = res.records
+}
+
+function onUnitChange(unitId: number) {
+  const u = units.value.find((x: any) => x.id === unitId)
+  form.unit = u ? u.name : ''
+}
+
 async function load() {
   loading.value = true
   try {
@@ -175,6 +206,8 @@ function handleReset() { query.keyword = ''; query.status = undefined; query.pag
 
 function openDialog(row?: any) {
   Object.keys(form).forEach((k) => delete form[k])
+  loadUnits()
+  loadSerialRules()
   if (row) {
     Object.assign(form, row)
   } else {
@@ -189,7 +222,7 @@ function openDialog(row?: any) {
 }
 
 async function handleSave() {
-  if (!form.name || !form.category || !form.unit) {
+  if (!form.name || !form.category || !form.unitId) {
     ElMessage.warning('请填写名称、分类和单位')
     return
   }

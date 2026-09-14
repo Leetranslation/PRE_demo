@@ -39,13 +39,14 @@
       </el-table-column>
       <el-table-column prop="totalAmount" label="金额" width="140" align="right" />
       <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-      <el-table-column label="操作" width="360" fixed="right">
+      <el-table-column label="操作" width="400" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="success" @click="openInbound(row)">入库</el-button>
           <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'pending_inbound'" link type="warning" @click="handleUnapprove(row)">反审核</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -182,6 +183,20 @@
 
   <!-- 物料选择弹窗 -->
   <MaterialPicker v-model="pickerVisible" @select="onMaterialSelected" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="采购订单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    total-label="合计金额（含税）"
+    :total-value="printTotal"
+    :remark="printRemark"
+    :show-upper="true"
+    :total-amount="printTotal"
+    :sign-labels="['制单人', '审核人', '供应商']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -194,6 +209,7 @@ import {
 } from '@/api/purchase'
 import { supplierList, warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
@@ -395,6 +411,36 @@ async function handleUnapprove(row: any) {
 async function viewItems(row: any) {
   items.value = await purchaseOrderItems(row.id)
   itemsVisible.value = true
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printTotal = ref<any>(0)
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料编号', prop: 'materialCode' },
+  { label: '物料名称', prop: 'materialName' },
+  { label: '规格', prop: 'spec' },
+  { label: '单位', prop: 'unit', align: 'center' },
+  { label: '数量', prop: 'quantity', align: 'right' },
+  { label: '含税单价', prop: 'price', align: 'right' },
+  { label: '税率', prop: 'taxRate', align: 'right', formatter: (r: any) => (r.taxRate ?? '') + '%' },
+  { label: '价税合计', prop: 'totalAmount', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await purchaseOrderItems(row.id)
+  printHead.value = [
+    [{ label: '采购单号', value: row.orderNo }, { label: '订单日期', value: row.orderDate }],
+    [{ label: '供应商', value: row.supplierName }, { label: '采购员', value: row.buyer }],
+    [{ label: '预计到货', value: row.expectedDate }]
+  ]
+  printRemark.value = row.remark
+  printTotal.value = row.totalAmount
+  printVisible.value = true
 }
 
 load()

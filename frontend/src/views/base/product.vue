@@ -61,7 +61,11 @@
     <el-form :model="form" label-width="110px">
       <el-form-item label="产品名称" required><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="分类" required><el-input v-model="form.category" /></el-form-item>
-      <el-form-item label="单位" required><el-input v-model="form.unit" /></el-form-item>
+      <el-form-item label="单位" required>
+        <el-select v-model="form.unitId" filterable placeholder="选择单位" style="width: 100%" @change="onUnitChange">
+          <el-option v-for="u in units" :key="u.id" :label="u.name" :value="u.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="规格"><el-input v-model="form.spec" /></el-form-item>
       <el-form-item label="批次/序列号">
         <el-select v-model="form.batchManage" style="width: 100%">
@@ -76,6 +80,9 @@
       <el-form-item label="生产提前期(天)">
         <el-input v-model="form.productionLeadDays" placeholder="生产提前期(天)" />
       </el-form-item>
+      <el-form-item label="标准成本">
+        <el-input v-model="form.standardCost" placeholder="标准成本单价（成本核算用）" />
+      </el-form-item>
       <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
     </el-form>
     <template #footer>
@@ -89,7 +96,7 @@
 defineOptions({ name: 'Product' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { productList, productCreate, productUpdate, productStatus } from '@/api/base'
+import { productList, productCreate, productUpdate, productStatus, unitList } from '@/api/base'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
@@ -98,6 +105,7 @@ const total = ref(0)
 const dialogVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: undefined as number | undefined })
 const form = reactive<any>({})
+const units = ref<any[]>([])
 
 const { selection, onSelectionChange, handleExport } = useExport(
   [
@@ -113,6 +121,16 @@ function doExport() { handleExport(records.value) }
 
 function batchText(v: string) {
   return { none: '不管理', batch: '批次', serial: '序列号' }[v] || v
+}
+
+async function loadUnits() {
+  const res = await unitList({ page: 1, pageSize: 100 })
+  units.value = res.records
+}
+
+function onUnitChange(unitId: number) {
+  const u = units.value.find((x: any) => x.id === unitId)
+  form.unit = u ? u.name : ''
 }
 
 async function load() {
@@ -131,13 +149,14 @@ function handleReset() { query.keyword = ''; query.status = undefined; query.pag
 
 function openDialog(row?: any) {
   Object.keys(form).forEach((k) => delete form[k])
+  loadUnits()
   if (row) Object.assign(form, row)
   else { form.batchManage = 'none'; form.productionQc = 0; form.productionLeadDays = 0 }
   dialogVisible.value = true
 }
 
 async function handleSave() {
-  if (!form.name || !form.category || !form.unit) {
+  if (!form.name || !form.category || !form.unitId) {
     ElMessage.warning('请填写名称、分类和单位')
     return
   }

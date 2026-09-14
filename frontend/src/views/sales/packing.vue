@@ -18,9 +18,10 @@
       <el-table-column prop="packingNo" label="装箱单号" width="160" />
       <el-table-column prop="outboundNo" label="出库单号" width="160" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -72,6 +73,16 @@
   </el-dialog>
 
   <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="装箱单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['装箱人', '复核人', '客户签收']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -80,6 +91,8 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { packingList, packingCreate } from '@/api/sales'
 import ProductPicker from '@/components/ProductPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -137,6 +150,28 @@ async function handleSave() {
 
 function viewItems(row: any) {
   ElMessage.info('装箱明细：' + row.packingNo)
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '箱号', prop: 'boxNo' },
+  { label: '产品', prop: 'productName' },
+  { label: '数量', prop: 'quantity', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  const res: any = await request.get('/sales/packing/items', { params: { packingId: row.id } })
+  printRows.value = res || []
+  printHead.value = [
+    [{ label: '装箱单号', value: row.packingNo }, { label: '出库单号', value: row.outboundNo }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

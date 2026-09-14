@@ -75,6 +75,14 @@ public class BomService {
                     i.setChildName(arr[1]);
                 }
             });
+            // 工序名称（process_id → 工序名）
+            Map<Long, String> pnm = nameFillUtil.processNameMap(
+                    list.stream().map(BomItem::getProcessId).collect(Collectors.toList()));
+            list.forEach(i -> {
+                if (i.getProcessId() != null) {
+                    i.setProcessName(pnm.get(i.getProcessId()));
+                }
+            });
         }
         return list;
     }

@@ -33,9 +33,10 @@
       </el-table-column>
       <el-table-column prop="bizDate" label="日期" width="110" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -91,6 +92,16 @@
   </el-dialog>
 
   <ProductPicker v-model="productPickerVisible" @select="onProduct" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="组装/拆卸单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['制单人', '仓管员', '审核人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -100,6 +111,7 @@ import { ElMessage } from 'element-plus'
 import { assemblyList, assemblyItems, assemblyCreate } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -166,6 +178,29 @@ async function handleSave() {
 async function viewItems(row: any) {
   detailItems.value = await assemblyItems(row.id)
   detailVisible.value = true
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料', prop: 'materialName' },
+  { label: '数量', prop: 'quantity', align: 'right' },
+  { label: '单位', prop: 'unit', align: 'center' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await assemblyItems(row.id)
+  printHead.value = [
+    [{ label: '单号', value: row.orderNo }, { label: '日期', value: row.bizDate }],
+    [{ label: '类型', value: row.type === 'assembly' ? '组装' : '拆卸' }, { label: '产品', value: row.productName }],
+    [{ label: '成品数量', value: row.quantity }, { label: '仓库', value: warehouseName(row.warehouseId) }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 loadWarehouses()

@@ -32,11 +32,12 @@
           <el-tag :type="approveTagType(row.approveStatus)" size="small">{{ approveText(row.approveStatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="240" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="submit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="approve(row)">审批</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="danger" @click="unapprove(row)">反审核</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -73,6 +74,20 @@
       <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
   </el-dialog>
+
+  <PrintDialog
+    v-model="printVisible"
+    title="销售发票"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    total-label="开票金额"
+    :total-value="printTotal"
+    :remark="printRemark"
+    :show-upper="true"
+    :total-amount="printTotal"
+    :sign-labels="['制单人', '审核人', '客户签收']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -80,6 +95,7 @@ defineOptions({ name: 'SalesInvoice' })
 import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { salesInvoiceList, salesInvoiceCreate, salesInvoiceSubmit, salesInvoiceApprove, salesInvoiceUnapprove, salesOrderList } from '@/api/sales'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -140,6 +156,33 @@ async function approve(row: any) { await salesInvoiceApprove(row.id); ElMessage.
 async function unapprove(row: any) {
   await ElMessageBox.confirm('确定反审核该发票吗？', '提示', { type: 'warning' })
   await salesInvoiceUnapprove(row.id); ElMessage.success('已反审核'); load()
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printTotal = ref<any>(0)
+const printCols = [
+  { label: '项目', prop: 'item' },
+  { label: '金额', prop: 'amt', align: 'right' }
+]
+
+function handlePrint(row: any) {
+  printHead.value = [
+    [{ label: '发票号', value: row.invoiceNo }, { label: '开票日期', value: row.invoiceDate }],
+    [{ label: '销售订单号', value: row.sourceOrderNo }, { label: '审批状态', value: approveText(row.approveStatus) }]
+  ]
+  const unverified = (Number(row.amount || 0) - Number(row.verifiedAmount || 0)).toFixed(2)
+  printRows.value = [
+    { item: '开票金额', amt: row.amount },
+    { item: '已核销金额', amt: row.verifiedAmount },
+    { item: '未核销金额', amt: unverified }
+  ]
+  printRemark.value = row.remark
+  printTotal.value = row.amount
+  printVisible.value = true
 }
 
 load()

@@ -30,6 +30,7 @@ public class SalesInvoiceService {
     private final SysConfigService sysConfigService;
     private final SecurityUtils securityUtils;
     private final NameFillUtil nameFillUtil;
+    private final ReceivableService receivableService;
 
     public Page<SalesInvoice> page(long page, long pageSize, String keyword, String approveStatus) {
         LambdaQueryWrapper<SalesInvoice> qw = new LambdaQueryWrapper<>();
@@ -106,6 +107,9 @@ public class SalesInvoiceService {
             order.setInvoicedAmount(invoiced.add(inv.getAmount()));
             orderMapper.updateById(order);
         }
+
+        // 生成应收台账
+        receivableService.generateFromInvoice(inv);
     }
 
     @Transactional
@@ -114,6 +118,8 @@ public class SalesInvoiceService {
         if (inv == null) throw new BizException(404, "发票不存在");
         if (!"approved".equals(inv.getApproveStatus())) throw new BizException("仅已审批可反审核");
         if (!"pending".equals(inv.getBizStatus())) throw new BizException("已核销的发票不能反审核，需先处理核销");
+        // 移除未核销的应收台账（已资金核销则抛异常阻止反审核）
+        receivableService.removeByInvoice(inv.getId());
         inv.setApproveStatus("pending");
         invoiceMapper.updateById(inv);
 

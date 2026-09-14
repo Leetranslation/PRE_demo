@@ -23,6 +23,9 @@
     <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="warehouseName" label="仓库" width="140" />
+      <el-table-column label="库区" width="120">
+        <template #default="{ row }">{{ areaName(row.areaId) }}</template>
+      </el-table-column>
       <el-table-column prop="code" label="库位编号" width="160" />
       <el-table-column prop="name" label="库位名称" min-width="160" />
       <el-table-column label="状态" width="90">
@@ -56,6 +59,11 @@
           <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
         </el-select>
       </el-form-item>
+      <el-form-item label="库区">
+        <el-select v-model="form.areaId" clearable filterable placeholder="可选" style="width: 100%">
+          <el-option v-for="a in areas" :key="a.id" :label="a.name" :value="a.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="库位编号" required><el-input v-model="form.code" /></el-form-item>
       <el-form-item label="库位名称"><el-input v-model="form.name" /></el-form-item>
     </el-form>
@@ -71,13 +79,14 @@ defineOptions({ name: 'Location' })
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { locationList, locationCreate, locationUpdate } from '@/api/inventory'
-import { warehouseList } from '@/api/base'
+import { warehouseList, areaList } from '@/api/base'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const warehouses = ref<any[]>([])
+const areas = ref<any[]>([])
 const dialogVisible = ref(false)
 const query = reactive({ page: 1, pageSize: 10, warehouseId: undefined as number | undefined, keyword: '' })
 const form = reactive<any>({})
@@ -97,6 +106,13 @@ async function loadWarehouses() {
   const res = await warehouseList({ page: 1, pageSize: 100 })
   warehouses.value = res.records
 }
+
+async function loadAreas() {
+  const res = await areaList({ page: 1, pageSize: 200 })
+  areas.value = res.records
+}
+
+function areaName(id: number) { return areas.value.find((a) => a.id === id)?.name || '' }
 
 async function load() {
   loading.value = true
@@ -131,6 +147,7 @@ async function handleSave() {
 }
 
 loadWarehouses()
+loadAreas()
 load()
 </script>
 

@@ -45,11 +45,12 @@
           <el-tag :type="auditTagType(row.auditStatus)" size="small">{{ auditText(row.auditStatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.auditStatus === 'pending'" link type="success" @click="approve(row)">审核</el-button>
           <el-button v-if="row.auditStatus === 'pending'" link type="danger" @click="reject(row)">驳回</el-button>
           <el-button v-if="row.auditStatus === 'approved'" link type="warning" @click="unapprove(row)">反审核</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -95,6 +96,16 @@
       <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
   </el-dialog>
+
+  <PrintDialog
+    v-model="printVisible"
+    title="报工单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['报工人', '审核人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -103,6 +114,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { reportWorkList, reportWorkCreate, reportWorkApprove, reportWorkUnapprove, reportWorkReject, reportWorkBatchApprove, productionOrderList } from '@/api/production'
 import { processRouteItems, processList, defectList } from '@/api/base'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -211,6 +223,32 @@ async function handleBatchApprove() {
   await reportWorkBatchApprove(query.workOrderId)
   ElMessage.success('一键审核完成')
   load()
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '项目', prop: 'item' },
+  { label: '数值', prop: 'amt', align: 'right' }
+]
+
+function handlePrint(row: any) {
+  printHead.value = [
+    [{ label: '报工单号', value: row.reportNo }, { label: '生产工单', value: orderNo(row.workOrderId) }],
+    [{ label: '工序', value: processName(row.processId) }, { label: '报工人', value: row.reporterName }],
+    [{ label: '审工状态', value: auditText(row.auditStatus) }, { label: '不良品项', value: defectName(row.defectItemId) }]
+  ]
+  printRows.value = [
+    { item: '报工数量', amt: row.quantity },
+    { item: '良品数量', amt: row.qualifiedQty },
+    { item: '不良品数量', amt: row.defectiveQty },
+    { item: '工时（小时）', amt: row.workHours }
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 loadOrders()

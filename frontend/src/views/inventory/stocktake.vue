@@ -35,11 +35,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="230" fixed="right">
+      <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openCount(row, true)">录数</el-button>
           <el-button link type="warning" :disabled="row.status === 'adjusted'" @click="doAdjust(row)">生成调整</el-button>
           <el-button link type="primary" @click="openCount(row, false)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -89,6 +90,16 @@
       <el-button v-if="countEditable" type="primary" @click="handleCount">保存实际数</el-button>
     </template>
   </el-dialog>
+
+  <PrintDialog
+    v-model="printVisible"
+    title="库存盘点单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['盘点人', '复核人', '仓管员']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -97,6 +108,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { stocktakeList, stocktakeItems, stocktakeCreate, stocktakeCount, stocktakeAdjust } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -165,6 +177,30 @@ async function doAdjust(row: any) {
   await stocktakeAdjust(row.id)
   ElMessage.success('调整完成')
   load()
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料/产品', prop: 'itemName' },
+  { label: '类型', prop: 'itemType', align: 'center' },
+  { label: '账面数量', prop: 'bookQty', align: 'right' },
+  { label: '实际数量', prop: 'actualQty', align: 'right' },
+  { label: '差异', prop: 'diffQty', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await stocktakeItems(row.id)
+  printHead.value = [
+    [{ label: '盘点单号', value: row.stocktakeNo }, { label: '盘点日期', value: row.stocktakeDate }],
+    [{ label: '仓库', value: warehouseName(row.warehouseId) }, { label: '状态', value: statusText(row.status) }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 loadWarehouses()

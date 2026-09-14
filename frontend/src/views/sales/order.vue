@@ -39,7 +39,7 @@
       </el-table-column>
       <el-table-column prop="totalAmount" label="金额" width="140" align="right" />
       <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
-      <el-table-column label="操作" width="300" fixed="right">
+      <el-table-column label="操作" width="340" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
@@ -47,6 +47,7 @@
           <el-button v-if="row.approveStatus === 'approved'" link type="warning" @click="openReturn(row)">退货</el-button>
           <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'pending_outbound'" link type="warning" @click="handleUnapprove(row)">反审核</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -180,6 +181,72 @@
       <el-table-column prop="totalAmount" label="价税合计" width="120" />
       <el-table-column prop="outboundQty" label="已出库" width="100" />
     </el-table>
+  </el-dialog>
+
+  <!-- 打印预览 -->
+  <el-dialog v-model="printVisible" title="销售订单打印预览" width="860px">
+    <div id="print-area" class="print-area">
+      <div class="print-title">销售订单</div>
+      <div class="print-head">
+        <div class="print-head-row">
+          <span>单号：{{ printOrder.orderNo }}</span>
+          <span>订单日期：{{ printOrder.orderDate || '-' }}</span>
+        </div>
+        <div class="print-head-row">
+          <span>客户：{{ printOrder.customerName || '-' }}</span>
+          <span>交货日期：{{ printOrder.deliveryDate || '-' }}</span>
+        </div>
+        <div class="print-head-row">
+          <span>业务员：{{ printOrder.salesman || '-' }}</span>
+          <span>销售类型：{{ printOrder.salesType === 'normal' ? '普通销售' : (printOrder.salesType || '-') }}</span>
+        </div>
+      </div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">序号</th>
+            <th>产品编号</th>
+            <th>产品名称</th>
+            <th>规格</th>
+            <th style="width: 55px">单位</th>
+            <th style="width: 70px">数量</th>
+            <th style="width: 80px">单价</th>
+            <th style="width: 55px">税率</th>
+            <th style="width: 90px">金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(it, i) in printItems" :key="i">
+            <td align="center">{{ i + 1 }}</td>
+            <td>{{ it.productCode }}</td>
+            <td>{{ it.productName }}</td>
+            <td>{{ it.spec }}</td>
+            <td align="center">{{ it.unit }}</td>
+            <td align="right">{{ it.quantity }}</td>
+            <td align="right">{{ it.price }}</td>
+            <td align="right">{{ it.taxRate }}%</td>
+            <td align="right">{{ it.totalAmount }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="8" align="right"><b>合计金额（含税）</b></td>
+            <td align="right"><b>{{ printOrder.totalAmount }}</b></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="print-upper">大写：{{ upperAmount(printOrder.totalAmount) }}</div>
+      <div class="print-remark">备注：{{ printOrder.remark || '无' }}</div>
+      <div class="print-sign">
+        <span>制单人：____________</span>
+        <span>审核人：____________</span>
+        <span>客户签收：____________</span>
+      </div>
+    </div>
+    <template #footer>
+      <el-button @click="printVisible = false">关闭</el-button>
+      <el-button type="primary" @click="doPrint">打印</el-button>
+    </template>
   </el-dialog>
 
   <!-- 产品选择弹窗 -->
@@ -399,6 +466,65 @@ async function viewItems(row: any) {
   itemsVisible.value = true
 }
 
+// ===== 打印 =====
+const printVisible = ref(false)
+const printOrder = reactive<any>({})
+const printItems = ref<any[]>([])
+
+async function handlePrint(row: any) {
+  Object.assign(printOrder, row)
+  printItems.value = await salesOrderItems(row.id)
+  printVisible.value = true
+}
+
+function upperAmount(money: any) {
+  const n = Number(money)
+  if (!n || isNaN(n)) return '零元整'
+  const fraction = ['角', '分']
+  const digit = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
+  const unit = [['元', '万', '亿'], ['', '拾', '佰', '仟']]
+  const head = n < 0 ? '负' : ''
+  let num = Math.abs(n)
+  let s = ''
+  for (let i = 0; i < fraction.length; i++) {
+    s += (digit[Math.floor(num * 10 * Math.pow(10, i)) % 10] + fraction[i]).replace(/零./, '')
+  }
+  s = s || '整'
+  num = Math.floor(num)
+  for (let i = 0; i < unit[0].length && num > 0; i++) {
+    let p = ''
+    for (let j = 0; j < unit[1].length && num > 0; j++) {
+      p = digit[num % 10] + unit[1][j] + p
+      num = Math.floor(num / 10)
+    }
+    s = p.replace(/(零.)*零$/, '').replace(/^$/, '零') + unit[0][i] + s
+  }
+  return head + s.replace(/(零.)*零元/, '元').replace(/(零.)+/g, '零').replace(/^整$/, '零元整')
+}
+
+function doPrint() {
+  const el = document.getElementById('print-area')
+  if (!el) return
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (!win) { ElMessage.warning('请允许浏览器弹出窗口后再打印'); return }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>销售订单 ${printOrder.orderNo}</title>
+    <style>
+      body { font-family: "Microsoft YaHei", SimSun, sans-serif; padding: 24px; color: #000; font-size: 13px; }
+      .print-title { text-align: center; font-size: 22px; font-weight: bold; letter-spacing: 8px; margin-bottom: 16px; }
+      .print-head { margin-bottom: 10px; }
+      .print-head-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+      .print-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      .print-table th, .print-table td { border: 1px solid #000; padding: 5px 8px; font-size: 12px; }
+      .print-table th { background: #f2f2f2; text-align: center; }
+      .print-upper { margin-top: 8px; }
+      .print-remark { margin-top: 8px; }
+      .print-sign { display: flex; justify-content: space-between; margin-top: 48px; }
+    </style></head><body>${el.innerHTML}</body></html>`)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 300)
+}
+
 load()
 </script>
 
@@ -411,4 +537,17 @@ load()
 .picker-name { font-weight: 500; color: #333; }
 .picker-spec { font-size: 12px; color: #999; }
 .picker-empty { font-size: 12px; color: #c0c4cc; }
+</style>
+
+<style>
+.print-area { color: #000; font-size: 13px; }
+.print-title { text-align: center; font-size: 22px; font-weight: bold; letter-spacing: 8px; margin-bottom: 16px; }
+.print-head { margin-bottom: 10px; }
+.print-head-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.print-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.print-table th, .print-table td { border: 1px solid #000; padding: 5px 8px; font-size: 12px; }
+.print-table th { background: #f2f2f2; text-align: center; }
+.print-upper { margin-top: 8px; }
+.print-remark { margin-top: 8px; }
+.print-sign { display: flex; justify-content: space-between; margin-top: 48px; }
 </style>

@@ -49,7 +49,7 @@
           <el-tag :type="bizType(row.bizStatus)" size="small">{{ bizText(row.bizStatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column label="操作" width="310" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="doSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="doApprove(row)">审批</el-button>
@@ -57,6 +57,7 @@
           <el-button v-if="row.bizStatus === 'outsourcing'" link type="success" @click="doFinish(row)">完工</el-button>
           <el-button v-if="row.bizStatus !== 'finished' && row.bizStatus !== 'voided'" link type="danger" @click="doVoid(row)">作废</el-button>
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -135,6 +136,16 @@
   </el-dialog>
 
   <MaterialPicker v-model="pickerVisible" @select="onSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="外协单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['制单人', '审核人', '供应商']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -148,6 +159,7 @@ import {
 import { productionOrderList } from '@/api/production'
 import { supplierList, processList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -233,6 +245,30 @@ async function doVoid(row: any) {
 async function viewItems(row: any) {
   detailItems.value = await outsourceOrderItems(row.id)
   detailVisible.value = true
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料/产品', prop: 'itemName' },
+  { label: '类型', prop: 'itemType', align: 'center' },
+  { label: '数量', prop: 'quantity', align: 'right' },
+  { label: '单位', prop: 'unit', align: 'center' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await outsourceOrderItems(row.id)
+  printHead.value = [
+    [{ label: '外协单号', value: row.orderNo }, { label: '类型', value: row.type === 'whole' ? '整单外协' : '工序外协' }],
+    [{ label: '生产工单', value: orderNo(row.orderId) }, { label: '外协供应商', value: supplierName(row.supplierId) }],
+    [{ label: '数量', value: row.quantity }, { label: '交货日期', value: row.deliveryDate }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 loadBase()

@@ -100,9 +100,11 @@
           <el-input v-model="row.lossRate" size="small" placeholder="损耗率" />
         </template>
       </el-table-column>
-      <el-table-column label="工序" width="120">
+      <el-table-column label="工序" width="150">
         <template #default="{ row }">
-          <el-input v-model="row.process" size="small" />
+          <el-select v-model="row.processId" size="small" clearable placeholder="选择" @change="(v: any) => onProcessChange(row, v)">
+            <el-option v-for="p in processes" :key="p.id" :label="p.name" :value="p.id" />
+          </el-select>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="70">
@@ -126,7 +128,7 @@
       <el-table-column prop="quantity" label="数量" width="120" />
       <el-table-column prop="unit" label="单位" width="90" />
       <el-table-column prop="lossRate" label="损耗率" width="100" />
-      <el-table-column prop="process" label="工序" min-width="120" />
+      <el-table-column prop="processName" label="工序" min-width="120" />
     </el-table>
   </el-dialog>
 
@@ -139,7 +141,7 @@
 defineOptions({ name: 'Bom' })
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { bomList, bomCreate, bomItems } from '@/api/base'
+import { bomList, bomCreate, bomItems, processList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
 import { useExport } from '@/composables/useExport'
@@ -152,6 +154,7 @@ const itemsVisible = ref(false)
 const items = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '' })
 const form = reactive<any>({ items: [] })
+const processes = ref<any[]>([])
 
 const { selection, onSelectionChange, handleExport } = useExport(
   [
@@ -203,6 +206,16 @@ function onMaterialSelected(material: any) {
   }
 }
 
+function onProcessChange(row: any, processId: number) {
+  const p = processes.value.find((x: any) => x.id === processId)
+  row.process = p ? p.name : ''
+}
+
+async function loadProcesses() {
+  const res = await processList({ page: 1, pageSize: 200 })
+  processes.value = res.records
+}
+
 async function load() {
   loading.value = true
   try {
@@ -224,11 +237,12 @@ function openDialog() {
   form.productId = undefined
   form.productName = ''
   form.items = []
+  loadProcesses()
   dialogVisible.value = true
 }
 
 function addItem() {
-  form.items.push({ childType: 'material', childId: undefined, childName: '', quantity: 0, unit: '', lossRate: 0, process: '' })
+  form.items.push({ childType: 'material', childId: undefined, childName: '', quantity: 0, unit: '', lossRate: 0, process: '', processId: undefined })
 }
 
 async function handleSave() {

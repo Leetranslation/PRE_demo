@@ -76,6 +76,9 @@
 | 库存 | `/api/inventory/` |
 | 质量 | `/api/quality/` |
 | MRP | `/api/mrp/` |
+| 财务 | `/api/finance/` |
+| 成本 | `/api/cost/` |
+| 设备 | `/api/equipment/` |
 | 系统 | `/api/system/` |
 | 认证 | `/api/auth/` |
 
@@ -110,7 +113,7 @@
 | 项 | 规则 |
 |---|---|
 | 格式 | `业务前缀 + yyyyMMdd + 4位流水` |
-| 前缀 | WL物料 / CP产品 / KH客户 / GY供应商 / SO销售订单 / PO采购订单 / MO生产工单 / BOM / QC质检 / RK入库 / CK出库 / MRP计划 / **GX工序 / GY工艺路线**（V2 新增） |
+| 前缀 | WL物料 / CP产品 / KH客户 / GY供应商 / SO销售订单 / PO采购订单 / MO生产工单 / BOM / QC质检 / RK入库 / CK出库 / MRP计划 / **GX工序 / GY工艺路线**（V2 新增）/ **YS应收 / YF应付 / SK收款 / FK付款**（阶段6 新增） |
 | 说明 | 按日重置流水（每日从 0001 起），删除单据编号不复用 |
 
 ---
@@ -540,3 +543,45 @@ public class ProcessController {
 | 方法 | 路径 | 说明 | 权限码 |
 |---|---|---|---|
 | GET | `/api/dashboard/cockpit` | 驾驶舱统计（9 KPI + 待办中心 + 图表） | 登录即可 |
+
+### 阶段6：财务 - 应收/应付/收付款/核销（FinanceController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/finance/receivable/list` | 分页查询应收台账 | finance |
+| GET | `/api/finance/payable/list` | 分页查询应付台账 | finance |
+| GET | `/api/finance/receipt/list` | 分页查询收款单 | finance |
+| POST | `/api/finance/receipt/create` | 新增收款单 | finance:create |
+| POST | `/api/finance/receipt/writeoff` | 收款核销应收 | finance:writeoff |
+| GET | `/api/finance/receipt/writeoffItems` | 收款核销明细 | finance |
+| GET | `/api/finance/payment/list` | 分页查询付款单 | finance |
+| POST | `/api/finance/payment/create` | 新增付款单 | finance:create |
+| POST | `/api/finance/payment/writeoff` | 付款核销应付 | finance:writeoff |
+| GET | `/api/finance/payment/writeoffItems` | 付款核销明细 | finance |
+
+### 阶段7：成本核算（CostController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| POST | `/api/cost/calculate` | 工单成本核算（材料/人工/制造费用） | finance |
+
+### 阶段8-1：设备管理 TPM（Check/Maintenance/RepairController）
+
+| 方法 | 路径 | 说明 | 权限码 |
+|---|---|---|---|
+| GET | `/api/equipment/check/list` | 分页查询点检记录 | equipment |
+| POST | `/api/equipment/check/create` | 新增点检记录 | equipment:edit |
+| POST | `/api/equipment/check/update` | 编辑点检记录 | equipment:edit |
+| POST | `/api/equipment/check/delete` | 删除点检记录 | equipment:edit |
+| GET | `/api/equipment/maintenance/list` | 分页查询保养记录 | equipment |
+| POST | `/api/equipment/maintenance/create` | 新增保养计划 | equipment:edit |
+| POST | `/api/equipment/maintenance/update` | 编辑保养记录 | equipment:edit |
+| POST | `/api/equipment/maintenance/complete` | 完成保养（回写设备保养日期） | equipment:edit |
+| POST | `/api/equipment/maintenance/delete` | 删除保养记录 | equipment:edit |
+| GET | `/api/equipment/repair/list` | 分页查询维修工单 | equipment |
+| POST | `/api/equipment/repair/create` | 设备报修（设备转维修中） | equipment:edit |
+| POST | `/api/equipment/repair/update` | 编辑维修工单 | equipment:edit |
+| POST | `/api/equipment/repair/status` | 更新维修状态（pending/repairing/done） | equipment:edit |
+| POST | `/api/equipment/repair/delete` | 删除维修工单 | equipment:edit |
+
+> 设备台账：复用 `/api/base/machine/*`（`base:machine`），已扩展设备管理字段（型号/厂商/购置/保修/设备状态/保养周期）。

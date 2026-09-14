@@ -23,6 +23,8 @@ public class BomItem implements Serializable {
     private String unit;
     private BigDecimal lossRate;
     private String process;
+    /** 工序ID（外键，process 字段保留为冗余快照） */
+    private Long processId;
     private Integer sort;
     private String remark;
 
@@ -31,4 +33,7 @@ public class BomItem implements Serializable {
     private String childCode;
     @TableField(exist = false)
     private String childName;
+    /** 工序名称（冗余展示） */
+    @TableField(exist = false)
+    private String processName;
 }

@@ -27,8 +27,9 @@ public class MachineController {
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") long pageSize,
             @Parameter(description = "关键字（名称/编号）") @RequestParam(required = false) String keyword,
             @Parameter(description = "状态：1启用 0停用") @RequestParam(required = false) Integer status,
-            @Parameter(description = "车间ID") @RequestParam(required = false) Long workshopId) {
-        return Result.success(PageResult.of(machineService.page(page, pageSize, keyword, status, workshopId)));
+            @Parameter(description = "车间ID") @RequestParam(required = false) Long workshopId,
+            @Parameter(description = "设备状态") @RequestParam(required = false) String equipStatus) {
+        return Result.success(PageResult.of(machineService.page(page, pageSize, keyword, status, workshopId, equipStatus)));
     }
 
     @Operation(summary = "新增机台")

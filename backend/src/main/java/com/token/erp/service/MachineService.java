@@ -16,7 +16,7 @@ public class MachineService {
     private final MachineMapper machineMapper;
     private final CodeGenerator codeGenerator;
 
-    public Page<Machine> page(long page, long pageSize, String keyword, Integer status, Long workshopId) {
+    public Page<Machine> page(long page, long pageSize, String keyword, Integer status, Long workshopId, String equipStatus) {
         LambdaQueryWrapper<Machine> qw = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             qw.and(w -> w.like(Machine::getName, keyword).or().like(Machine::getCode, keyword));
@@ -26,6 +26,9 @@ public class MachineService {
         }
         if (workshopId != null) {
             qw.eq(Machine::getWorkshopId, workshopId);
+        }
+        if (StringUtils.hasText(equipStatus)) {
+            qw.eq(Machine::getEquipStatus, equipStatus);
         }
         qw.orderByDesc(Machine::getId);
         return machineMapper.selectPage(new Page<>(page, pageSize), qw);
@@ -38,6 +41,7 @@ public class MachineService {
         machine.setId(null);
         machine.setCode(codeGenerator.next("JT"));
         machine.setStatus(machine.getStatus() == null ? 1 : machine.getStatus());
+        machine.setEquipStatus(StringUtils.hasText(machine.getEquipStatus()) ? machine.getEquipStatus() : "normal");
         machineMapper.insert(machine);
         return machine;
     }

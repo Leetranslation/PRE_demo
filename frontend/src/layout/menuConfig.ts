@@ -11,6 +11,7 @@ import {
   User,
   Connection,
   Odometer,
+  Money,
   type Component
 } from '@element-plus/icons-vue'
 
@@ -56,6 +57,12 @@ export const topMenus: TopMenu[] = [
     title: '驾驶舱',
     icon: Odometer,
     path: '/cockpit'
+  },
+  {
+    key: 'architecture',
+    title: '架构总览',
+    icon: Files,
+    path: '/architecture'
   },
   {
     key: 'base',
@@ -259,6 +266,54 @@ export const topMenus: TopMenu[] = [
           { path: '/outsource/order', title: '外协单' },
           { path: '/outsource/issue', title: '外协领料' },
           { path: '/outsource/inbound', title: '外协入库' }
+        ]
+      }
+    ]
+  },
+  {
+    key: 'finance',
+    title: '财务管理',
+    icon: Money,
+    groups: [
+      {
+        groupTitle: '应收应付',
+        items: [
+          { path: '/finance/receivable', title: '应收台账' },
+          { path: '/finance/payable', title: '应付台账' }
+        ]
+      },
+      {
+        groupTitle: '收付款',
+        items: [
+          { path: '/finance/receipt', title: '收款单' },
+          { path: '/finance/payment', title: '付款单' }
+        ]
+      },
+      {
+        groupTitle: '成本',
+        items: [
+          { path: '/finance/cost', title: '成本核算' }
+        ]
+      }
+    ]
+  },
+  {
+    key: 'equipment',
+    title: '设备管理',
+    icon: Tools,
+    groups: [
+      {
+        groupTitle: '设备台账',
+        items: [
+          { path: '/equipment/ledger', title: '设备台账' }
+        ]
+      },
+      {
+        groupTitle: '设备维护',
+        items: [
+          { path: '/equipment/check', title: '设备点检' },
+          { path: '/equipment/maintenance', title: '设备保养' },
+          { path: '/equipment/repair', title: '设备维修' }
         ]
       }
     ]

@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.token.erp.common.BizException;
 import com.token.erp.entity.Product;
+import com.token.erp.entity.Unit;
 import com.token.erp.mapper.ProductMapper;
+import com.token.erp.mapper.UnitMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -14,6 +16,7 @@ import org.springframework.util.StringUtils;
 public class ProductService {
 
     private final ProductMapper productMapper;
+    private final UnitMapper unitMapper;
     private final CodeGenerator codeGenerator;
 
     public Page<Product> page(long page, long pageSize, String keyword, Integer status) {
@@ -36,8 +39,13 @@ public class ProductService {
         if (!StringUtils.hasText(product.getCategory())) {
             throw new BizException("产品分类不能为空");
         }
-        if (!StringUtils.hasText(product.getUnit())) {
+        if (product.getUnitId() == null) {
             throw new BizException("单位不能为空");
+        }
+        // 单位快照缺失时按 unitId 回填，保证 unit 列非空
+        if (!StringUtils.hasText(product.getUnit())) {
+            Unit u = unitMapper.selectById(product.getUnitId());
+            if (u != null) product.setUnit(u.getName());
         }
         product.setId(null);
         product.setCode(codeGenerator.next("CP"));

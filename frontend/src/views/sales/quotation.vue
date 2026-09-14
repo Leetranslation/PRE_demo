@@ -41,12 +41,13 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="submit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="approve(row)">审批</el-button>
           <el-button v-if="row.approveStatus === 'approved' && row.bizStatus !== 'converted'" link type="warning" @click="convert(row)">转销售订单</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="danger" @click="unapprove(row)">反审核</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -116,15 +117,30 @@
   </el-dialog>
 
   <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="报价单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    total-label="合计金额（含税）"
+    :total-value="printTotal"
+    :remark="printRemark"
+    :show-upper="true"
+    :total-amount="printTotal"
+    :sign-labels="['制单人', '审核人', '客户确认']"
+  />
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Quotation' })
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { quotationList, quotationCreate, quotationSubmit, quotationApprove, quotationUnapprove, quotationConvert } from '@/api/sales'
+import { quotationList, quotationItems, quotationCreate, quotationSubmit, quotationApprove, quotationUnapprove, quotationConvert } from '@/api/sales'
 import { customerList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -204,6 +220,36 @@ async function convert(row: any) {
   const res = await quotationConvert(row.id)
   ElMessage.success('已生成销售订单：' + (res as any).data?.orderNo || '')
   load()
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printTotal = ref<any>(0)
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '产品编号', prop: 'productCode' },
+  { label: '产品名称', prop: 'productName' },
+  { label: '规格', prop: 'spec' },
+  { label: '单位', prop: 'unit', align: 'center' },
+  { label: '数量', prop: 'quantity', align: 'right' },
+  { label: '含税单价', prop: 'price', align: 'right' },
+  { label: '税率', prop: 'taxRate', align: 'right', formatter: (r: any) => (r.taxRate ?? '') + '%' },
+  { label: '价税合计', prop: 'totalAmount', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await quotationItems(row.id)
+  printHead.value = [
+    [{ label: '单号', value: row.quotationNo }, { label: '报价日期', value: row.quoteDate }],
+    [{ label: '客户', value: row.customerName }, { label: '业务员', value: row.salesman }],
+    [{ label: '有效期至', value: row.validUntil }]
+  ]
+  printRemark.value = row.remark
+  printTotal.value = row.totalAmount
+  printVisible.value = true
 }
 
 load()

@@ -192,6 +192,20 @@ public class DataInitializer implements CommandLineRunner {
             {"outsource:order:create", "外协单新增/编辑", "button", null},
             {"outsource:order:approve", "外协单审批/反审核", "button", null},
             {"outsource:order:start", "外协单开始/完工/作废", "button", null},
+            // 财务 - 菜单 + 操作
+            {"finance", "财务应收应付", "menu", "/finance"},
+            {"finance:receivable", "应收台账", "menu", "/finance/receivable"},
+            {"finance:payable", "应付台账", "menu", "/finance/payable"},
+            {"finance:receipt", "收款单", "menu", "/finance/receipt"},
+            {"finance:payment", "付款单", "menu", "/finance/payment"},
+            {"finance:create", "收款/付款单新增", "button", null},
+            {"finance:writeoff", "核销", "button", null},
+            // 设备管理 - 菜单 + 操作
+            {"equipment", "设备管理", "menu", "/equipment"},
+            {"equipment:check", "设备点检", "menu", "/equipment/check"},
+            {"equipment:maintenance", "设备保养", "menu", "/equipment/maintenance"},
+            {"equipment:repair", "设备维修", "menu", "/equipment/repair"},
+            {"equipment:edit", "设备管理编辑", "button", null},
             // 系统管理 - 菜单
             {"system:user", "用户管理", "menu", "/system/user"},
             {"system:user:reset", "重置密码", "button", null},

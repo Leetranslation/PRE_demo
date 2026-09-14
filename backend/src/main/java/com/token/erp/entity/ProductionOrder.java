@@ -39,6 +39,12 @@ public class ProductionOrder extends BaseEntity {
     private String urgency;
     private String outsourceStatus;
     private BigDecimal completedQty;
+    /** 成本核算结果字段 */
+    private BigDecimal materialCost;
+    private BigDecimal laborCost;
+    private BigDecimal overheadCost;
+    private BigDecimal totalCost;
+    private BigDecimal unitCost;
     private String remark;
 
     /** 产品编码/名称（冗余展示字段） */

@@ -18,9 +18,10 @@
           {{ col.formatter(row) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" :width="printTitle ? 150 : 100" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewDetail(row)">明细</el-button>
+          <el-button v-if="printTitle" link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -36,6 +37,20 @@
       @current-change="load"
     />
   </el-card>
+
+  <PrintDialog
+    v-model="printVisible"
+    :title="printTitle || '单据'"
+    :head-rows="printHead"
+    :columns="printCols && printCols.length ? printCols : columns"
+    :rows="printRows"
+    :total-label="printTotalProp ? '合计金额' : ''"
+    :total-value="printTotalValue"
+    :remark="printRemark"
+    :show-upper="printShowUpper"
+    :total-amount="printTotalValue"
+    :sign-labels="printSignLabels"
+  />
 </template>
 
 <script setup lang="ts">
@@ -43,12 +58,20 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { exportExcel, type ExportColumn } from '@/utils/export'
 import type { PageResult } from '@/api/base'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const props = defineProps<{
   columns: Array<{ prop: string; label: string; width?: number; minWidth?: number; align?: string; formatter?: (row: any) => string }>
   fetchList: (params: any) => Promise<PageResult<any>>
   fetchItems: (id: number) => Promise<any[]>
   filename?: string
+  printTitle?: string
+  printHeadFn?: (row: any) => any[][]
+  printCols?: any[]
+  printTotalProp?: string
+  printShowUpper?: boolean
+  printSignLabels?: string[]
+  printRemarkProp?: string
 }>()
 
 const emit = defineEmits<{ (e: 'detail', items: any[]): void }>()
@@ -92,6 +115,20 @@ function doExport() {
   }))
   exportExcel(exportCols, data, props.filename || '导出')
   ElMessage.success(`已导出 ${data.length} 条数据`)
+}
+
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printTotalValue = ref<any>('')
+
+async function handlePrint(row: any) {
+  printRows.value = await props.fetchItems(row.id)
+  printHead.value = props.printHeadFn ? props.printHeadFn(row) : []
+  printRemark.value = props.printRemarkProp ? row[props.printRemarkProp] : ''
+  printTotalValue.value = props.printTotalProp ? row[props.printTotalProp] : ''
+  printVisible.value = true
 }
 
 onMounted(load)

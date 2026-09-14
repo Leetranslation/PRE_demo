@@ -21,9 +21,10 @@
       <el-table-column prop="sourceOrderNo" label="采购订单号" width="160" />
       <el-table-column prop="returnDate" label="退货日期" width="110" />
       <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewItems(row)">明细</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -85,6 +86,16 @@
   </el-dialog>
 
   <MaterialPicker v-model="materialPickerVisible" @select="onMaterialSelect" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="采购退货单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['制单人', '仓管员', '供应商']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -94,6 +105,7 @@ import { ElMessage } from 'element-plus'
 import { purchaseReturnList, purchaseReturnCreate, purchaseReturnItems, purchaseOrderList } from '@/api/purchase'
 import { warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -156,6 +168,27 @@ async function handleSave() {
 async function viewItems(row: any) {
   detailItems.value = await purchaseReturnItems(row.id)
   detailVisible.value = true
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '物料', prop: 'materialName' },
+  { label: '退货数量', prop: 'quantity', align: 'right' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = await purchaseReturnItems(row.id)
+  printHead.value = [
+    [{ label: '退货单号', value: row.returnNo }, { label: '退货日期', value: row.returnDate }],
+    [{ label: '采购订单号', value: row.sourceOrderNo }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

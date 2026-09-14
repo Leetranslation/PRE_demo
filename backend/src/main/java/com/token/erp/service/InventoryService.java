@@ -313,6 +313,41 @@ public class InventoryService {
         return total;
     }
 
+    /** 查询指定维度（含库位/批次/序列号）、指定库存类型的可用数量，用于前置校验 */
+    public BigDecimal stockQty(Inventory dim) {
+        normalize(dim);
+        Inventory inv = inventoryMapper.selectOne(
+                new LambdaQueryWrapper<Inventory>()
+                        .eq(Inventory::getItemId, dim.getItemId())
+                        .eq(Inventory::getItemType, dim.getItemType())
+                        .eq(Inventory::getWarehouseId, dim.getWarehouseId())
+                        .eq(Inventory::getStockType, dim.getStockType())
+                        .eq(Inventory::getLocationId, dim.getLocationId())
+                        .eq(Inventory::getBatchNo, dim.getBatchNo())
+                        .eq(Inventory::getSerialNo, dim.getSerialNo()));
+        if (inv == null) return BigDecimal.ZERO;
+        BigDecimal qty = inv.getQuantity() == null ? BigDecimal.ZERO : inv.getQuantity();
+        BigDecimal reserved = inv.getReservedQty() == null ? BigDecimal.ZERO : inv.getReservedQty();
+        return qty.subtract(reserved);
+    }
+
+    /** 查询某物料在某仓库某库存类型的可用总量（跨库位/批次/序列号），用于判断是否存在带批次库存 */
+    public BigDecimal stockQtyTotal(Long itemId, String itemType, Long warehouseId, String stockType) {
+        List<Inventory> list = inventoryMapper.selectList(
+                new LambdaQueryWrapper<Inventory>()
+                        .eq(Inventory::getItemId, itemId)
+                        .eq(Inventory::getItemType, itemType)
+                        .eq(Inventory::getWarehouseId, warehouseId)
+                        .eq(Inventory::getStockType, stockType));
+        BigDecimal total = BigDecimal.ZERO;
+        for (Inventory inv : list) {
+            BigDecimal qty = inv.getQuantity() == null ? BigDecimal.ZERO : inv.getQuantity();
+            BigDecimal reserved = inv.getReservedQty() == null ? BigDecimal.ZERO : inv.getReservedQty();
+            total = total.add(qty.subtract(reserved));
+        }
+        return total;
+    }
+
     /** 批号跟踪：按批号查流水 */
     public Page<InventoryTransaction> batchTrack(long page, long pageSize, String batchNo) {
         LambdaQueryWrapper<InventoryTransaction> qw = new LambdaQueryWrapper<>();

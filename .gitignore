@@ -32,3 +32,6 @@ startup_err.log
 # Temp (docx extraction)
 docs/.tmp_docx/
 .tmp_docx/
+
+# Temp scripts (含本地数据库口令，勿提交)
+/_exec_finance.py

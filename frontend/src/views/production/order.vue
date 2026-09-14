@@ -44,7 +44,7 @@
         <template #default="{ row }">{{ bizText(row.bizStatus) }}</template>
       </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
-      <el-table-column label="操作" width="340" fixed="right">
+      <el-table-column label="操作" width="400" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
@@ -52,6 +52,7 @@
           <el-button v-if="row.approveStatus === 'approved'" link type="warning" @click="openReturn(row)">退料</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="success" @click="openInbound(row)">入库</el-button>
           <el-button v-if="row.approveStatus === 'approved' && (row.bizStatus === 'pending' || row.bizStatus === 'producing')" link type="danger" @click="handleUnapprove(row)">反审核</el-button>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -206,6 +207,16 @@
   <!-- 物料/产品选择弹窗 -->
   <MaterialPicker v-model="materialPickerVisible" @select="onMaterialSelected" />
   <ProductPicker v-model="productPickerVisible" @select="onProductSelected" />
+
+  <PrintDialog
+    v-model="printVisible"
+    title="生产工单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['制单人', '审核人', '领料人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -218,8 +229,9 @@ import {
 } from '@/api/production'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
+import PrintDialog from '@/components/PrintDialog.vue'
 import { useExport } from '@/composables/useExport'
-import { warehouseList, workshopList, machineList } from '@/api/base'
+import { warehouseList, workshopList, machineList, bomItems } from '@/api/base'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -476,6 +488,32 @@ async function handleInbound() {
   ElMessage.success('入库成功')
   inboundVisible.value = false
   load()
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '序号', prop: '_idx', width: '40px', align: 'center', formatter: (_r: any, i: number) => i + 1 },
+  { label: '类型', prop: 'childType', align: 'center', formatter: (r: any) => (r.childType === 'product' ? '产品' : '物料') },
+  { label: '子项', prop: 'childName' },
+  { label: '数量', prop: 'quantity', align: 'right' },
+  { label: '单位', prop: 'unit', align: 'center' }
+]
+
+async function handlePrint(row: any) {
+  printRows.value = row.bomId ? await bomItems(row.bomId) : []
+  printHead.value = [
+    [{ label: '工单号', value: row.orderNo }, { label: '计划日期', value: row.planDate }],
+    [{ label: '产品编号', value: row.productCode }, { label: '产品名称', value: row.productName }],
+    [{ label: '生产数量', value: row.quantity }, { label: '已完成', value: row.completedQty }],
+    [{ label: '车间', value: workshopName(row.workshopId) }, { label: '机台', value: machineName(row.machineId) }],
+    [{ label: '业务状态', value: bizText(row.bizStatus) }]
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

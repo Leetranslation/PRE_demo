@@ -25,6 +25,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/cockpit.vue'),
         meta: { title: '经营驾驶舱' }
       },
+      {
+        path: 'architecture',
+        name: 'Architecture',
+        component: () => import('@/views/architecture/index.vue'),
+        meta: { title: '系统架构一览' }
+      },
       // ===== 基础资料 =====
       {
         path: 'base/customer',
@@ -428,6 +434,62 @@ const routes: RouteRecordRaw[] = [
         name: 'OutsourceInbound',
         component: () => import('@/views/outsource/inbound.vue'),
         meta: { title: '外协入库' }
+      },
+      // ===== 财务 =====
+      {
+        path: 'finance/receivable',
+        name: 'Receivable',
+        component: () => import('@/views/finance/receivable.vue'),
+        meta: { title: '应收台账' }
+      },
+      {
+        path: 'finance/payable',
+        name: 'Payable',
+        component: () => import('@/views/finance/payable.vue'),
+        meta: { title: '应付台账' }
+      },
+      {
+        path: 'finance/receipt',
+        name: 'Receipt',
+        component: () => import('@/views/finance/receipt.vue'),
+        meta: { title: '收款单' }
+      },
+      {
+        path: 'finance/payment',
+        name: 'Payment',
+        component: () => import('@/views/finance/payment.vue'),
+        meta: { title: '付款单' }
+      },
+      {
+        path: 'finance/cost',
+        name: 'Cost',
+        component: () => import('@/views/finance/cost.vue'),
+        meta: { title: '成本核算' }
+      },
+      // ===== 设备管理 =====
+      {
+        path: 'equipment/ledger',
+        name: 'EquipmentLedger',
+        component: () => import('@/views/equipment/ledger.vue'),
+        meta: { title: '设备台账' }
+      },
+      {
+        path: 'equipment/check',
+        name: 'EquipmentCheck',
+        component: () => import('@/views/equipment/check.vue'),
+        meta: { title: '设备点检' }
+      },
+      {
+        path: 'equipment/maintenance',
+        name: 'EquipmentMaintenance',
+        component: () => import('@/views/equipment/maintenance.vue'),
+        meta: { title: '设备保养' }
+      },
+      {
+        path: 'equipment/repair',
+        name: 'EquipmentRepair',
+        component: () => import('@/views/equipment/repair.vue'),
+        meta: { title: '设备维修' }
       },
       // ===== 系统管理 =====
       {

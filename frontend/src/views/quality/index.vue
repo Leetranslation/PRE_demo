@@ -28,12 +28,13 @@
           <el-tag v-else type="info">待判定</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="210" fixed="right">
         <template #default="{ row }">
           <template v-if="!row.result">
             <el-button link type="success" @click="judge(row, 'qualified')">合格</el-button>
             <el-button link type="danger" @click="judgeUnqualified(row)">不合格</el-button>
           </template>
+          <el-button link type="primary" @click="handlePrint(row)">打印</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -49,6 +50,16 @@
       @current-change="load"
     />
   </el-card>
+
+  <PrintDialog
+    v-model="printVisible"
+    title="质量检验单"
+    :head-rows="printHead"
+    :columns="printCols"
+    :rows="printRows"
+    :remark="printRemark"
+    :sign-labels="['检验员', '复核人', '审核人']"
+  />
 </template>
 
 <script setup lang="ts">
@@ -57,6 +68,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { qualityList, qualityJudge } from '@/api/purchase'
 import { useExport } from '@/composables/useExport'
+import PrintDialog from '@/components/PrintDialog.vue'
 
 const RESULT_TEXT: Record<string, string> = {
   qualified: '合格',
@@ -123,6 +135,29 @@ function chooseHandleType(): Promise<string | null> {
       type: 'warning'
     }).then(() => resolve('return')).catch(() => resolve('scrap'))
   })
+}
+
+// ===== 打印 =====
+const printVisible = ref(false)
+const printHead = ref<any[][]>([])
+const printRows = ref<any[]>([])
+const printRemark = ref('')
+const printCols = [
+  { label: '项目', prop: 'item' },
+  { label: '内容', prop: 'val' }
+]
+
+function handlePrint(row: any) {
+  printHead.value = [
+    [{ label: '质检单号', value: row.inspectionNo }, { label: '质检日期', value: row.inspectionDate }],
+    [{ label: '物料/产品', value: row.itemName }, { label: '仓库', value: row.warehouseName }],
+    [{ label: '质检数量', value: row.quantity }]
+  ]
+  printRows.value = [
+    { item: '质检结果', val: row.result === 'qualified' ? '合格' : (row.result === 'unqualified' ? '不合格' : '待判定') }
+  ]
+  printRemark.value = row.remark
+  printVisible.value = true
 }
 
 load()

@@ -91,7 +91,7 @@ public class QcApplyService {
         if (apply == null) throw new BizException(404, "质检申请单不存在");
         if (!"pending".equals(apply.getStatus())) throw new BizException("该申请单已生成检验单或已检");
 
-        // 转待检：available → pending_qc（若 available 充足；否则说明库存已在待检，跳过）
+        // 转待检：优先匹配已在待检的库存（采购质检物料入库即待检），否则从可用库存搬运缺口
         transferToPendingQc(apply);
 
         QualityInspection inspection = new QualityInspection();
@@ -114,32 +114,48 @@ public class QcApplyService {
         return created;
     }
 
-    /** 库存转待检：available → pending_qc（尽力转，转不了说明已在待检） */
+    /**
+     * 库存转待检：优先匹配已在待检（pending_qc）的库存——采购质检物料入库时直接进待检，报检无需再搬运；
+     * 否则从可用库存（available）搬运缺口量。不做 try-catch 吞异常，缺货时抛出明确的业务异常。
+     */
     private void transferToPendingQc(QcApply apply) {
-        try {
-            Inventory availableDim = new Inventory();
-            availableDim.setItemId(apply.getItemId());
-            availableDim.setItemType(apply.getItemType());
-            availableDim.setWarehouseId(apply.getWarehouseId());
-            availableDim.setLocationId(apply.getLocationId());
-            availableDim.setBatchNo(apply.getBatchNo());
-            availableDim.setSerialNo(apply.getSerialNo());
-            availableDim.setStockType("available");
-            inventoryService.change(availableDim, "out", apply.getQuantity(),
-                    "qc_apply", apply.getId(), apply.getApplyNo());
+        Inventory pendingDim = buildDim(apply, "pending_qc");
 
-            Inventory pendingDim = new Inventory();
-            pendingDim.setItemId(apply.getItemId());
-            pendingDim.setItemType(apply.getItemType());
-            pendingDim.setWarehouseId(apply.getWarehouseId());
-            pendingDim.setLocationId(apply.getLocationId());
-            pendingDim.setBatchNo(apply.getBatchNo());
-            pendingDim.setSerialNo(apply.getSerialNo());
-            pendingDim.setStockType("pending_qc");
-            inventoryService.change(pendingDim, "in", apply.getQuantity(),
-                    "qc_apply", apply.getId(), apply.getApplyNo());
-        } catch (BizException e) {
-            // available 库存不足：库存可能已在 pending_qc，无需转换
+        // 1. 精确匹配（含库位/批次/序列号）该批次是否已在待检区
+        BigDecimal pendingQty = inventoryService.stockQty(pendingDim);
+        if (pendingQty.compareTo(apply.getQuantity()) >= 0) {
+            // 已在待检，无需搬运（采购质检物料的正常路径）
+            return;
         }
+
+        // 2. 待检精确库存不足，查该物料在待检区的跨批次总量，区分「漏填批次」与「真缺货」
+        BigDecimal pendingTotal = inventoryService.stockQtyTotal(
+                apply.getItemId(), apply.getItemType(), apply.getWarehouseId(), "pending_qc");
+        if (pendingTotal.compareTo(apply.getQuantity()) >= 0) {
+            // 待检区有足够的带批次库存，但没按批次精确匹配上 → 提示指定正确批次，避免检错货
+            throw new BizException("该物料在待检区存在带批次库存（共 " + pendingTotal
+                    + "），请指定正确批次/库位后报检");
+        }
+
+        // 3. 待检区确实无货，从可用库存搬运缺口量
+        BigDecimal shortage = apply.getQuantity().subtract(pendingQty);
+        Inventory availableDim = buildDim(apply, "available");
+        inventoryService.change(availableDim, "out", shortage,
+                "qc_apply", apply.getId(), apply.getApplyNo());
+        inventoryService.change(pendingDim, "in", shortage,
+                "qc_apply", apply.getId(), apply.getApplyNo());
+    }
+
+    /** 构造库存维度（库位/批次/序列号与申请单保持一致） */
+    private Inventory buildDim(QcApply apply, String stockType) {
+        Inventory dim = new Inventory();
+        dim.setItemId(apply.getItemId());
+        dim.setItemType(apply.getItemType());
+        dim.setWarehouseId(apply.getWarehouseId());
+        dim.setLocationId(apply.getLocationId());
+        dim.setBatchNo(apply.getBatchNo());
+        dim.setSerialNo(apply.getSerialNo());
+        dim.setStockType(stockType);
+        return dim;
     }
 }

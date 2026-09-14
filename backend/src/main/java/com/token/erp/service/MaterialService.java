@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.token.erp.common.BizException;
 import com.token.erp.entity.Material;
+import com.token.erp.entity.Unit;
 import com.token.erp.mapper.MaterialMapper;
+import com.token.erp.mapper.UnitMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -14,6 +16,7 @@ import org.springframework.util.StringUtils;
 public class MaterialService {
 
     private final MaterialMapper materialMapper;
+    private final UnitMapper unitMapper;
     private final CodeGenerator codeGenerator;
 
     public Page<Material> page(long page, long pageSize, String keyword, Integer status) {
@@ -37,8 +40,13 @@ public class MaterialService {
         if (!StringUtils.hasText(material.getCategory())) {
             throw new BizException("物料分类不能为空");
         }
-        if (!StringUtils.hasText(material.getUnit())) {
+        if (material.getUnitId() == null) {
             throw new BizException("单位不能为空");
+        }
+        // 单位快照缺失时按 unitId 回填，保证 unit 列非空
+        if (!StringUtils.hasText(material.getUnit())) {
+            Unit u = unitMapper.selectById(material.getUnitId());
+            if (u != null) material.setUnit(u.getName());
         }
         material.setId(null);
         material.setCode(codeGenerator.next("WL"));

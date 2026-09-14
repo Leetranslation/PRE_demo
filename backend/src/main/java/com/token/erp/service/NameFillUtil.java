@@ -3,6 +3,7 @@ package com.token.erp.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.token.erp.entity.Customer;
 import com.token.erp.entity.Location;
+import com.token.erp.entity.Machine;
 import com.token.erp.entity.Material;
 import com.token.erp.entity.Process;
 import com.token.erp.entity.Product;
@@ -16,6 +17,7 @@ import com.token.erp.entity.PurchaseInvoice;
 import com.token.erp.entity.SalesOutbound;
 import com.token.erp.mapper.CustomerMapper;
 import com.token.erp.mapper.LocationMapper;
+import com.token.erp.mapper.MachineMapper;
 import com.token.erp.mapper.MaterialMapper;
 import com.token.erp.mapper.ProcessMapper;
 import com.token.erp.mapper.ProductMapper;
@@ -60,6 +62,7 @@ public class NameFillUtil {
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final PurchaseInvoiceMapper purchaseInvoiceMapper;
     private final SalesOutboundMapper salesOutboundMapper;
+    private final MachineMapper machineMapper;
 
     private static Set<Long> nonNull(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) return Collections.emptySet();
@@ -143,6 +146,16 @@ public class NameFillUtil {
         List<Process> list = processMapper.selectList(new LambdaQueryWrapper<Process>().in(Process::getId, set));
         Map<Long, String> map = new HashMap<>();
         for (Process p : list) map.put(p.getId(), p.getName());
+        return map;
+    }
+
+    /** 机台/设备 id -> [code, name] */
+    public Map<Long, String[]> machineMap(Collection<Long> ids) {
+        Set<Long> set = nonNull(ids);
+        if (set.isEmpty()) return Collections.emptyMap();
+        List<Machine> list = machineMapper.selectList(new LambdaQueryWrapper<Machine>().in(Machine::getId, set));
+        Map<Long, String[]> map = new HashMap<>();
+        for (Machine m : list) map.put(m.getId(), new String[]{m.getCode(), m.getName()});
         return map;
     }
 
