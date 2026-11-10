@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="仓库">
         <el-select v-model="query.warehouseId" placeholder="全部" clearable filterable style="width: 160px">
@@ -20,7 +20,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openCreate">新建盘点</el-button>
+      <el-button type="primary" @click="openForm">新建盘点</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -57,20 +57,19 @@
     />
   </el-card>
 
-  <el-dialog v-model="createVisible" title="新建盘点" width="480px">
-    <el-form label-width="80px">
-      <el-form-item label="仓库" required>
-        <el-select v-model="createWarehouseId" placeholder="请选择" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="createRemark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="createVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreate">确定</el-button>
-    </template>
-  </el-dialog>
+  <!-- 新建盘点：整页单据表单（明细由系统按账面库存带入） -->
+  <DocForm
+    v-else
+    title="新建盘点单"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    hide-submit
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleCreate"
+  />
 
   <el-dialog v-model="countVisible" :title="countEditable ? '录入实际数' : '盘点明细'" width="760px">
     <el-table :data="items" border size="small">
@@ -104,21 +103,22 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Stocktake' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { stocktakeList, stocktakeItems, stocktakeCreate, stocktakeCount, stocktakeAdjust } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const warehouses = ref<any[]>([])
-const createVisible = ref(false)
+const formVisible = ref(false)
+const form = reactive<any>({ warehouseId: undefined, remark: '' })
 const countVisible = ref(false)
 const countEditable = ref(false)
-const createWarehouseId = ref<number>()
-const createRemark = ref('')
 const items = ref<any[]>([])
 const currentId = ref<number>()
 const query = reactive({ page: 1, pageSize: 10, warehouseId: undefined as number | undefined, status: undefined as string | undefined })
@@ -146,13 +146,32 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.warehouseId = undefined; query.status = undefined; query.page = 1; load() }
 
-function openCreate() { createWarehouseId.value = undefined; createRemark.value = ''; createVisible.value = true }
+function openForm() {
+  form.warehouseId = undefined
+  form.remark = ''
+  formVisible.value = true
+}
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  {
+    key: 'warehouseId',
+    label: '仓库',
+    type: 'select',
+    required: true,
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  { key: 'remark', label: '备注', span: 2 }
+])
 
 async function handleCreate() {
-  if (!createWarehouseId.value) { ElMessage.warning('请选择仓库'); return }
-  await stocktakeCreate(createWarehouseId.value, createRemark.value)
+  if (!form.warehouseId) { ElMessage.warning('请选择仓库'); return }
+  await stocktakeCreate(form.warehouseId, form.remark)
   ElMessage.success('盘点单已创建，已带入账面库存')
-  createVisible.value = false
+  formVisible.value = false
   load()
 }
 

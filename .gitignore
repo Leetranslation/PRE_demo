@@ -25,9 +25,10 @@ build_out.txt
 startup.log
 startup_err.log
 
-# Env
+# Env —— 只提交 .env.example，真实配置一律不进仓库
 .env
-.env.local
+.env.*
+!.env.example
 
 # Temp (docx extraction)
 docs/.tmp_docx/
@@ -35,3 +36,31 @@ docs/.tmp_docx/
 
 # Temp scripts (含本地数据库口令，勿提交)
 /_exec_finance.py
+
+# ===== 根目录临时调试产物 =====
+# 排查问题时落的 txt / log / png / py / json，里面可能带数据库口令、密钥、
+# 接口返回值 —— 一律不进仓库
+/_*.txt
+/_*.log
+/_*.png
+/_*.py
+/_*.json
+/_record/
+/_dist_check/
+
+# ===== Python / AI 服务 =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+index_cache.json
+*.faiss
+
+# ===== 工作流内部数据 =====
+.workbuddy/
+
+# 前端构建校验产物（每次 vite build 生成一份，含整包 JS）
+frontend/_dist_check*/
+
+# 前端目录下的临时调试产物（tsc/build 输出、e2e 脚本、截图）
+frontend/_*

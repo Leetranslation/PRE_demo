@@ -31,6 +31,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/architecture/index.vue'),
         meta: { title: '系统架构一览' }
       },
+      // ===== AI 工业大脑 =====
+      {
+        path: 'ai-brain',
+        name: 'AiBrain',
+        component: () => import('@/views/ai/index.vue'),
+        meta: { title: 'AI 工业大脑' }
+      },
+      {
+        path: 'ai-brain/purchase',
+        name: 'AiBrainPurchase',
+        component: () => import('@/views/ai/purchase.vue'),
+        meta: { title: '智能下单' }
+      },
+      {
+        path: 'ai-brain/sales',
+        name: 'AiBrainSales',
+        component: () => import('@/views/ai/sales.vue'),
+        meta: { title: '智能销售订单' }
+      },
       // ===== 基础资料 =====
       {
         path: 'base/customer',

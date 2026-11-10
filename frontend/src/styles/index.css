@@ -35,3 +35,24 @@ body,
 .el-table__inner-wrapper {
   width: 100% !important;
 }
+
+
+/* ===== AI 助手抽屉打开时，弹窗居中避开抽屉 =====
+   抽屉不是盖在 ERP 上（layout 已按 --tkai-w 给主区域让位），
+   但 el-dialog 是 teleport 到 body、按整屏居中的 —— 不挪一下会被抽屉压掉右半边。 */
+body.tkai-open .el-overlay-dialog {
+  padding-right: var(--tkai-w, 0px);
+  box-sizing: border-box;
+}
+/* ===== 🔴 抽屉的全屏容器会吃掉点击 =====
+   el-drawer 即使 :modal="false"，外面那层 .el-overlay.el-modal-drawer 仍然铺满全屏、
+   仍然接收点击 —— 只是变透明看不见。结果就是「AI 抽屉打开时，ERP 里所有按钮都点不动」。
+   修法：让这层彻底不吃事件，抽屉本体单独恢复。 */
+body.tkai-open .el-modal-drawer,
+body.tkai-open .is-drawer {
+  pointer-events: none !important;
+}
+body.tkai-open .el-modal-drawer > .el-drawer,
+body.tkai-open .is-drawer > .el-drawer {
+  pointer-events: auto;
+}

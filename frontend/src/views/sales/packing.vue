@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="装箱单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -11,7 +11,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增装箱单</el-button>
+      <el-button type="primary" @click="openForm()">新增装箱单</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -38,41 +38,41 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增装箱单" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">装箱明细</el-divider>
-    <div class="item-toolbar">
-      <el-button type="primary" size="small" @click="addRow">添加一行</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column label="箱号" width="140">
-        <template #default="{ row }"><el-input v-model="row.boxNo" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="产品" min-width="140">
-        <template #default="{ row }">
-          <el-button size="small" @click="pickProduct(row)">{{ row.productName || '选产品' }}</el-button>
-        </template>
-      </el-table-column>
-      <el-table-column label="数量" width="120">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增装箱单：整页单据表单（无审批流） -->
+  <DocForm
+    v-else
+    title="新建装箱单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    hide-submit
+    @update:items="(v) => (form.items = v)"
+    @add="addRow"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #col-product="{ row }">
+      <el-button size="small" @click="pickProduct(row)">{{ row.productName || '选产品' }}</el-button>
     </template>
-  </el-dialog>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
 
   <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
+
+  <!-- 装箱明细：真弹明细，不再只弹一个单号 -->
+  <el-dialog v-model="detailVisible" :title="'装箱明细 ' + detailNo" width="640px">
+    <el-table :data="detailItems" border size="small">
+      <el-table-column type="index" label="序号" width="56" align="center" />
+      <el-table-column prop="boxNo" label="箱号" width="130" />
+      <el-table-column prop="productCode" label="产品编号" width="140" />
+      <el-table-column prop="productName" label="产品名称" min-width="160" />
+      <el-table-column prop="quantity" label="数量" width="100" align="right" />
+      <el-table-column prop="remark" label="备注" min-width="120" />
+    </el-table>
+  </el-dialog>
 
   <PrintDialog
     v-model="printVisible"
@@ -87,17 +87,19 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Packing' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { packingList, packingCreate } from '@/api/sales'
+import { packingList, packingCreate, packingItems } from '@/api/sales'
 import ProductPicker from '@/components/ProductPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 import request from '@/utils/request'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const productPickerVisible = ref(false)
 const currentRow = ref<any>(null)
 const query = reactive({ page: 1, pageSize: 10, keyword: '' })
@@ -131,11 +133,28 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields: DocField[] = [{ key: 'remark', label: '备注', span: 3 }]
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'boxNo', label: '箱号', width: '160', type: 'input' },
+  { key: 'product', label: '产品', width: '260' },
+  { key: 'quantity', label: '数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.items || form.items.length === 0) { ElMessage.warning('请添加装箱明细'); return }
@@ -144,12 +163,18 @@ async function handleSave() {
     items: form.items.map((i: any) => ({ boxNo: i.boxNo, productId: i.productId, quantity: Number(i.quantity) }))
   })
   ElMessage.success('保存成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 
-function viewItems(row: any) {
-  ElMessage.info('装箱明细：' + row.packingNo)
+const detailVisible = ref(false)
+const detailItems = ref<any[]>([])
+const detailNo = ref('')
+
+async function viewItems(row: any) {
+  detailNo.value = row.packingNo
+  detailItems.value = await packingItems(row.id)
+  detailVisible.value = true
 }
 
 // ===== 打印 =====

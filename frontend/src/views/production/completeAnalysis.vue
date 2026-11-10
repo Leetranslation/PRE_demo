@@ -3,7 +3,12 @@
     <div class="select-bar">
       <span class="label">生产工单：</span>
       <el-select v-model="workOrderId" placeholder="请选择工单" filterable style="width: 320px" @change="doAnalysis">
-        <el-option v-for="o in orders" :key="o.id" :label="`${o.orderNo} / ${o.productId}`" :value="o.id" />
+        <el-option
+          v-for="o in orders"
+          :key="o.id"
+          :label="`${o.orderNo}  ${o.productName || o.productCode || ''}  ${o.quantity ?? ''}件`"
+          :value="o.id"
+        />
       </el-select>
       <el-button type="primary" :disabled="!workOrderId" @click="doAnalysis">齐套分析</el-button>
     </div>

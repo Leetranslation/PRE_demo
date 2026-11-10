@@ -101,7 +101,7 @@ public class ReportWorkService {
         return rw;
     }
 
-    /** 审工：审核通过（联动工单完工数量） */
+    /** 审工：审核通过。仅变更报工单状态；工单完工数量由生产入库累加（见 ProductionInboundService），此处不联动 */
     @Transactional
     public void approve(Long id) {
         ReportWork rw = reportWorkMapper.selectById(id);
@@ -116,7 +116,7 @@ public class ReportWorkService {
         reportWorkMapper.updateById(rw);
     }
 
-    /** 审工：反审核（回退工单完工数量） */
+    /** 审工：反审核。仅回退报工单状态；不涉及工单完工数量（该值只由生产入库累加） */
     @Transactional
     public void unApprove(Long id) {
         ReportWork rw = reportWorkMapper.selectById(id);

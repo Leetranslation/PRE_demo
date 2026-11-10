@@ -12,8 +12,11 @@ import {
   Connection,
   Odometer,
   Money,
-  type Component
+  MagicStick
 } from '@element-plus/icons-vue'
+// ⚠️ `Component` 是 Vue 的类型，`@element-plus/icons-vue` 不导出它
+// （原来写成 `from '@element-plus/icons-vue'`，TS 报 TS2305）
+import type { Component } from 'vue'
 
 export interface MenuLeaf {
   path: string
@@ -63,6 +66,12 @@ export const topMenus: TopMenu[] = [
     title: '架构总览',
     icon: Files,
     path: '/architecture'
+  },
+  {
+    key: 'ai-brain',
+    title: 'AI 工业大脑',
+    icon: MagicStick,
+    path: '/ai-brain'
   },
   {
     key: 'base',

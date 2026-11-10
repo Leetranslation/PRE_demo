@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="发票号" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增发票</el-button>
+      <el-button type="primary" @click="openForm()">新增发票</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -54,26 +54,34 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增采购发票" width="520px">
-    <el-form :model="form" label-width="110px">
-      <el-form-item label="采购订单" required>
-        <el-select v-model="form.orderId" placeholder="请选择订单" filterable style="width: 100%">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="可开票金额">
-        <el-input :model-value="availableAmount" readonly />
-      </el-form-item>
-      <el-form-item label="发票金额" required>
-        <el-input v-model="form.amount" type="number" placeholder="不超过可开票金额" />
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增采购发票：整页单据表单（无明细） -->
+  <DocForm
+    v-else
+    title="新建采购发票"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    :pick-labels="pickLabels"
+    @pick="onPick"
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-availableAmount>
+      <el-input :model-value="availableAmount" readonly />
     </template>
-  </el-dialog>
+  </DocForm>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择采购订单"
+    keyword-placeholder="采购单号 / 供应商 / 物料"
+    :columns="PURCHASE_ORDER_COLS"
+    :fetcher="(p) => purchaseOrderList(p as any)"
+    @select="applyOrder"
+  />
 
   <PrintDialog
     v-model="printVisible"
@@ -96,17 +104,23 @@ import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { purchaseInvoiceList, purchaseInvoiceCreate, purchaseInvoiceSubmit, purchaseInvoiceApprove, purchaseInvoiceUnapprove, purchaseOrderList } from '@/api/purchase'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import { PURCHASE_ORDER_COLS } from '@/components/docPickerPresets'
+import type { DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
 const orders = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 const form = reactive<any>({})
 
 const availableAmount = computed(() => {
-  const o = orders.value.find((x) => x.id === form.orderId)
+  const o = pickedOrder.value || orders.value.find((x) => x.id === form.orderId)
   if (!o) return ''
   const invoiced = Number(o.invoicedAmount || 0)
   const totalAmt = Number(o.totalAmount || 0)
@@ -135,17 +149,50 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
+  pickedOrder.value = null
   loadOrders()
-  dialogVisible.value = true
+  formVisible.value = true
+}
+function closeForm() {
+  formVisible.value = false
 }
 
-async function handleSave() {
+/** 选择器里那一栏显示什么：单号 + 供应商 + 金额（不是裸编号） */
+const pickLabels = computed<Record<string, string>>(() => ({
+  orderId: pickedOrder.value
+    ? `${pickedOrder.value.orderNo}  ${pickedOrder.value.supplierName || ''}  ￥${pickedOrder.value.totalAmount ?? ''}`
+    : ''
+}))
+
+function onPick(key: string) {
+  if (key === 'orderId') orderPickerVisible.value = true
+}
+
+function applyOrder(o: any) {
+  pickedOrder.value = o
+  form.orderId = o.id
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  { key: 'orderId', label: '采购订单', type: 'pick', required: true },
+  { key: 'availableAmount', label: '可开票金额', type: 'slot' },
+  { key: 'amount', label: '发票金额', required: true, placeholder: '不超过可开票金额' },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+async function handleSave(submitAfter = false) {
   if (!form.orderId || form.amount == null) { ElMessage.warning('请选择订单并填写发票金额'); return }
-  await purchaseInvoiceCreate({ orderId: form.orderId, amount: Number(form.amount), remark: form.remark })
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
+  const created: any = await purchaseInvoiceCreate({ orderId: form.orderId, amount: Number(form.amount), remark: form.remark })
+  if (submitAfter && created?.id) {
+    await purchaseInvoiceSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 

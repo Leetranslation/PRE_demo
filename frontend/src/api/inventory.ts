@@ -46,6 +46,10 @@ export function otherStockList(params: any) {
 export function otherStockCreate(data: any) {
   return request.post('/inventory/otherStock/create', data)
 }
+/** 其他出入库明细 */
+export function otherStockItems(stockId: number) {
+  return request.get('/inventory/otherStock/items', { params: { stockId } }) as Promise<any[]>
+}
 
 // ===== 库存盘点 =====
 export function stocktakeList(params: any) {

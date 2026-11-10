@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="类型">
         <el-select v-model="query.type" placeholder="全部" clearable style="width: 130px">
@@ -21,7 +21,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增外协单</el-button>
+      <el-button type="primary" @click="openForm()">新增外协单</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -74,57 +74,63 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑外协单' : '新增外协单'" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="类型" required>
-        <el-radio-group v-model="form.type" :disabled="!!form.id">
-          <el-radio-button value="whole">整单外协</el-radio-button>
-          <el-radio-button value="process">工序外协</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="生产工单" required>
-        <el-select v-model="form.orderId" placeholder="请选择工单" filterable style="width: 100%">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="form.type === 'process'" label="外协工序" required>
-        <el-select v-model="form.processId" placeholder="请选择工序" filterable style="width: 100%">
-          <el-option v-for="p in processes" :key="p.id" :label="p.name" :value="p.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="外协供应商" required>
-        <el-select v-model="form.supplierId" placeholder="请选择供应商" filterable style="width: 100%">
-          <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="外协数量"><el-input v-model="form.quantity" type="number" style="width: 100%" /></el-form-item>
-      <el-form-item label="交货日期">
-        <el-date-picker v-model="form.deliveryDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">外协明细（发出物料/产品）</el-divider>
-    <div class="item-toolbar">
-      <el-button type="primary" size="small" @click="pickerVisible = true">添加物料</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="itemName" label="物料/产品" min-width="180" />
-      <el-table-column label="数量" width="130">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增/编辑外协单：整页单据表单 -->
+  <DocForm
+    v-else
+    :title="formTitle"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    hide-add
+    :hide-submit="!!form.id"
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #field-type>
+      <el-radio-group v-model="form.type" :disabled="!!form.id">
+        <el-radio-button value="whole">整单外协</el-radio-button>
+        <el-radio-button value="process">工序外协</el-radio-button>
+      </el-radio-group>
     </template>
-  </el-dialog>
+    <template #field-orderId>
+      <div class="pick-field">
+        <el-input
+          :model-value="pickedOrder ? `${pickedOrder.orderNo} ${pickedOrder.productName || ''}` : ''"
+          readonly
+          size="small"
+          placeholder="点右侧选择工单"
+        />
+        <el-button size="small" @click="orderPickerVisible = true">选择</el-button>
+      </div>
+    </template>
+    <template #field-processId>
+      <el-select v-model="form.processId" placeholder="请选择工序" filterable size="small" style="width: 100%">
+        <el-option v-for="p in processes" :key="p.id" :label="p.name" :value="p.id" />
+      </el-select>
+    </template>
+    <template #field-supplierId>
+      <el-select v-model="form.supplierId" placeholder="请选择供应商" filterable size="small" style="width: 100%">
+        <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id" />
+      </el-select>
+    </template>
+    <template #tools>
+      <el-button type="primary" size="small" @click="pickerVisible = true">添加物料</el-button>
+    </template>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择生产工单"
+    keyword-placeholder="工单号 / 产品编号 / 产品名称"
+    :columns="orderPickCols"
+    :fetcher="fetchOrders"
+    @select="applyOrder"
+  />
 
   <el-dialog v-model="detailVisible" title="外协明细" width="560px">
     <el-table :data="detailItems" border size="small">
@@ -150,7 +156,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'OutsourceOrder' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   outsourceOrderList, outsourceOrderItems, outsourceOrderCreate, outsourceOrderUpdate,
@@ -160,6 +166,10 @@ import { productionOrderList } from '@/api/production'
 import { supplierList, processList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
+import type { DocPickColumn } from '@/components/DocPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -167,7 +177,9 @@ const total = ref(0)
 const orders = ref<any[]>([])
 const suppliers = ref<any[]>([])
 const processes = ref<any[]>([])
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
 const detailVisible = ref(false)
 const pickerVisible = ref(false)
 const detailItems = ref<any[]>([])
@@ -209,13 +221,76 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.type = undefined; query.approveStatus = undefined; query.page = 1; load() }
 
-function openDialog(row?: any) {
+function openForm(row?: any) {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
-  if (row) { Object.assign(form, row); detailItems.value = [] }
-  else form.type = 'whole'
-  dialogVisible.value = true
+  if (row) {
+    Object.assign(form, row)
+    detailItems.value = []
+    pickedOrder.value = orders.value.find((o: any) => o.id === row.orderId) || { orderNo: '#' + row.orderId }
+  } else {
+    form.type = 'whole'
+    pickedOrder.value = null
+  }
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 工单选择器的列 */
+const orderPickCols: DocPickColumn[] = [
+  { prop: 'orderNo', label: '工单号', width: '170' },
+  { prop: 'productCode', label: '产品编号', width: '140' },
+  { prop: 'productName', label: '产品名称', minWidth: '150' },
+  { prop: 'quantity', label: '生产数量', width: '100', align: 'right' },
+  { prop: 'completedQty', label: '已完成', width: '90', align: 'right' },
+  {
+    prop: 'approveStatus',
+    label: '审批状态',
+    width: '100',
+    format: (r: any) => ({ pending: '待提交', approving: '审批中', approved: '已审批' }[r.approveStatus as string] || r.approveStatus || '')
+  }
+]
+
+function fetchOrders(p: { page: number; pageSize: number; keyword: string }) {
+  return productionOrderList(p as any)
+}
+
+function applyOrder(order: any) {
+  pickedOrder.value = order
+  form.orderId = order.id
+}
+
+const formTitle = computed(() => (form.id ? '编辑外协单' : '新建外协单'))
+
+/** 基本信息字段（工序外协才显示「外协工序」） */
+const docFields = computed<DocField[]>(() => {
+  const fs: DocField[] = [
+    { key: 'type', label: '类型', type: 'slot', required: true },
+    { key: 'orderId', label: '生产工单', type: 'slot', required: true }
+  ]
+  if (form.type === 'process') {
+    fs.push({ key: 'processId', label: '外协工序', type: 'slot', required: true })
+  }
+  fs.push(
+    { key: 'supplierId', label: '外协供应商', type: 'slot', required: true },
+    { key: 'quantity', label: '外协数量' },
+    { key: 'deliveryDate', label: '交货日期', type: 'date' },
+    { key: 'remark', label: '备注', span: 2 }
+  )
+  return fs
+})
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'itemName', label: '物料/产品', width: '260' },
+  { key: 'quantity', label: '数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.orderId) { ElMessage.warning('请选择生产工单'); return }
@@ -230,7 +305,7 @@ async function handleSave() {
   if (form.id) await outsourceOrderUpdate(data)
   else await outsourceOrderCreate(data)
   ElMessage.success('保存成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 
@@ -276,6 +351,8 @@ load()
 </script>
 
 <style scoped>
+.pick-field { display: flex; gap: 6px; align-items: center; }
+.pick-field .el-input { flex: 1; }
 .filter-bar { margin-bottom: 8px; }
 .toolbar { margin-bottom: 12px; }
 .item-toolbar { margin-bottom: 8px; }

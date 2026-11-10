@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="核销单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增核销</el-button>
+      <el-button type="primary" @click="openForm()">新增核销</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -52,26 +52,34 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增采购核销" width="520px">
-    <el-form :model="form" label-width="110px">
-      <el-form-item label="采购发票" required>
-        <el-select v-model="form.invoiceId" placeholder="请选择发票" filterable style="width: 100%">
-          <el-option v-for="inv in invoices" :key="inv.id" :label="inv.invoiceNo" :value="inv.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="可核销金额">
-        <el-input :model-value="availableAmount" readonly />
-      </el-form-item>
-      <el-form-item label="核销金额" required>
-        <el-input v-model="form.amount" type="number" placeholder="不超过可核销金额" />
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增采购核销：整页单据表单（无明细） -->
+  <DocForm
+    v-else
+    title="新建采购核销"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    :pick-labels="pickLabels"
+    @pick="onPick"
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-availableAmount>
+      <el-input :model-value="availableAmount" readonly />
     </template>
-  </el-dialog>
+  </DocForm>
+
+  <DocPicker
+    v-model="invoicePickerVisible"
+    title="选择采购发票"
+    keyword-placeholder="发票号 / 来源订单号"
+    :columns="INVOICE_COLS"
+    :fetcher="(p) => purchaseInvoiceList(p as any)"
+    @select="applyInvoice"
+  />
 </template>
 
 <script setup lang="ts">
@@ -79,17 +87,23 @@ defineOptions({ name: 'PurchaseVerification' })
 import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { purchaseVerificationList, purchaseVerificationCreate, purchaseVerificationSubmit, purchaseVerificationApprove, purchaseVerificationUnapprove, purchaseInvoiceList } from '@/api/purchase'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import { INVOICE_COLS } from '@/components/docPickerPresets'
+import type { DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const invoicePickerVisible = ref(false)
+const pickedInvoice = ref<any>(null)
 const invoices = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 const form = reactive<any>({})
 
 const availableAmount = computed(() => {
-  const inv = invoices.value.find((x) => x.id === form.invoiceId)
+  const inv = pickedInvoice.value || invoices.value.find((x) => x.id === form.invoiceId)
   if (!inv) return ''
   return (Number(inv.amount || 0) - Number(inv.verifiedAmount || 0)).toFixed(2)
 })
@@ -116,17 +130,50 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
+  pickedInvoice.value = null
   loadInvoices()
-  dialogVisible.value = true
+  formVisible.value = true
+}
+function closeForm() {
+  formVisible.value = false
 }
 
-async function handleSave() {
+/** 选择器显示文本：发票号 + 来源订单 + 金额 */
+const pickLabels = computed<Record<string, string>>(() => ({
+  invoiceId: pickedInvoice.value
+    ? `${pickedInvoice.value.invoiceNo}  ${pickedInvoice.value.sourceOrderNo || ''}  ￥${pickedInvoice.value.amount ?? ''}`
+    : ''
+}))
+
+function onPick(key: string) {
+  if (key === 'invoiceId') invoicePickerVisible.value = true
+}
+
+function applyInvoice(inv: any) {
+  pickedInvoice.value = inv
+  form.invoiceId = inv.id
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  { key: 'invoiceId', label: '采购发票', type: 'pick', required: true },
+  { key: 'availableAmount', label: '可核销金额', type: 'slot' },
+  { key: 'amount', label: '核销金额', required: true, placeholder: '不超过可核销金额' },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+async function handleSave(submitAfter = false) {
   if (!form.invoiceId || form.amount == null) { ElMessage.warning('请选择发票并填写核销金额'); return }
-  await purchaseVerificationCreate({ invoiceId: form.invoiceId, amount: Number(form.amount), remark: form.remark })
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
+  const created: any = await purchaseVerificationCreate({ invoiceId: form.invoiceId, amount: Number(form.amount), remark: form.remark })
+  if (submitAfter && created?.id) {
+    await purchaseVerificationSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 

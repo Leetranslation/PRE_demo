@@ -1,0 +1,9 @@
+# 构建产物和本地日志不进镜像
+target/
+logs/
+*.log
+
+# IDE / 版本控制
+.idea/
+*.iml
+.git/

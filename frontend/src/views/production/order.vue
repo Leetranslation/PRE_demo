@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="工单号" clearable style="width: 200px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openCreate">新增工单</el-button>
+      <el-button type="primary" @click="openForm">新增工单</el-button>
       <el-button @click="doExport">导出</el-button>
     </div>
 
@@ -44,10 +44,12 @@
         <template #default="{ row }">{{ bizText(row.bizStatus) }}</template>
       </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
-      <el-table-column label="操作" width="400" fixed="right">
+      <el-table-column label="操作" width="500" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.approveStatus === 'pending'" link type="primary" @click="handleSubmit(row)">提交</el-button>
           <el-button v-if="row.approveStatus === 'approving'" link type="success" @click="handleApprove(row)">审批通过</el-button>
+          <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'pending'" link type="success" @click="handleStart(row)">工单开始</el-button>
+          <el-button v-if="row.approveStatus === 'approved' && row.bizStatus === 'producing'" link type="warning" @click="handleFinish(row)">完工</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="primary" @click="openIssue(row)">领料</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="warning" @click="openReturn(row)">退料</el-button>
           <el-button v-if="row.approveStatus === 'approved'" link type="success" @click="openInbound(row)">入库</el-button>
@@ -69,46 +71,55 @@
     />
   </el-card>
 
-  <!-- 新增工单 -->
-  <el-dialog v-model="createVisible" title="新增生产工单" width="560px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="产品" required>
-        <el-input v-model="form.productName" placeholder="点击选择产品" readonly style="width: 100%">
-          <template #append>
-            <el-button @click="openProductPickerForMain">选择</el-button>
-          </template>
-        </el-input>
-      </el-form-item>
-      <el-form-item label="生产数量" required><el-input v-model="form.quantity" placeholder="生产数量" /></el-form-item>
-      <el-form-item label="生产类型">
-        <el-select v-model="form.productionType" style="width: 100%">
-          <el-option label="订单生产" value="order" />
-          <el-option label="库存生产" value="stock" />
-          <el-option label="MRP生产" value="mrp" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="计划生产日期"><el-date-picker v-model="form.planDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item>
-      <el-form-item label="车间">
-        <el-select v-model="form.workshopId" placeholder="请选择车间" clearable filterable style="width: 100%" @change="onWorkshopChange">
-          <el-option v-for="w in workshops" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="机台">
-        <el-select v-model="form.machineId" placeholder="请选择机台" clearable filterable :disabled="!form.workshopId" style="width: 100%">
-          <el-option v-for="m in machines" :key="m.id" :label="m.name" :value="m.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="工艺路线">
-        <el-input :model-value="form.processRouteName || '自动带出'" placeholder="选产品后自动带出" readonly style="width: 100%" />
-      </el-form-item>
-      <el-form-item label="负责人"><el-input v-model="form.owner" /></el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="createVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreate">保存</el-button>
+  <!-- 新增工单：整页单据表单（工单无明细，只有表头） -->
+  <DocForm
+    v-else
+    title="新建生产工单"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-productId>
+      <el-input v-model="form.productName" placeholder="点击选择产品" readonly size="small">
+        <template #append>
+          <el-button @click="openProductPickerForMain">选择</el-button>
+        </template>
+      </el-input>
     </template>
-  </el-dialog>
+
+    <template #field-workshopId>
+      <el-select
+        v-model="form.workshopId"
+        placeholder="请选择车间"
+        clearable
+        filterable
+        size="small"
+        style="width: 100%"
+        @change="onWorkshopChange"
+      >
+        <el-option v-for="w in workshops" :key="w.id" :label="w.name" :value="w.id" />
+      </el-select>
+    </template>
+
+    <template #field-machineId>
+      <el-select
+        v-model="form.machineId"
+        placeholder="请选择机台"
+        clearable
+        filterable
+        size="small"
+        :disabled="!form.workshopId"
+        style="width: 100%"
+      >
+        <el-option v-for="m in machines" :key="m.id" :label="m.name" :value="m.id" />
+      </el-select>
+    </template>
+  </DocForm>
 
   <!-- 领料 -->
   <el-dialog v-model="issueVisible" title="生产领料" width="620px">
@@ -225,11 +236,14 @@ import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   productionOrderList, productionOrderCreate, productionOrderSubmit,
-  productionOrderApprove, productionOrderUnapprove, materialIssueCreate, materialReturnCreate, productionInboundCreate
+  productionOrderApprove, productionOrderUnapprove, productionOrderStart, productionOrderFinish,
+  materialIssueCreate, materialReturnCreate, productionInboundCreate
 } from '@/api/production'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import ProductPicker from '@/components/ProductPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocField } from '@/components/docForm'
 import { useExport } from '@/composables/useExport'
 import { warehouseList, workshopList, machineList, bomItems } from '@/api/base'
 
@@ -238,7 +252,7 @@ const records = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 
-const createVisible = ref(false)
+const formVisible = ref(false)
 const issueVisible = ref(false)
 const returnVisible = ref(false)
 const inboundVisible = ref(false)
@@ -332,7 +346,7 @@ function doExport() {
 
 function approveText(v: string) { return { pending: '待提交', approving: '审批中', approved: '已审批' }[v] || v }
 function approveTagType(v: string) { return { pending: 'info', approving: 'warning', approved: 'success' }[v] || 'info' }
-function bizText(v: string) { return { pending: '待生产', producing: '生产中', partial: '部分完成', completed: '已完成' }[v] || v }
+function bizText(v: string) { return { pending: '待生产', producing: '生产中', partial: '部分完成', finished: '已完工', completed: '已完成', voided: '已作废' }[v] || v }
 
 function openProductPickerForMain() {
   isMainProduct.value = true
@@ -385,22 +399,67 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openCreate() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.productionType = 'stock'
   loadWorkshops()
   machines.value = []
-  createVisible.value = true
+  formVisible.value = true
 }
-async function handleCreate() {
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段（5 列网格） */
+const docFields: DocField[] = [
+  { key: 'productId', label: '产品', type: 'slot', required: true },
+  { key: 'quantity', label: '生产数量', required: true, placeholder: '生产数量' },
+  {
+    key: 'productionType',
+    label: '生产类型',
+    type: 'select',
+    options: [
+      { label: '订单生产', value: 'order' },
+      { label: '库存生产', value: 'stock' },
+      { label: 'MRP生产', value: 'mrp' }
+    ]
+  },
+  { key: 'planDate', label: '计划生产日期', type: 'date' },
+  { key: 'workshopId', label: '车间', type: 'slot' },
+  { key: 'machineId', label: '机台', type: 'slot' },
+  { key: 'processRouteName', label: '工艺路线', type: 'readonly', placeholder: '选产品后自动带出' },
+  { key: 'owner', label: '负责人' },
+  { key: 'remark', label: '备注', span: 2 }
+]
+
+async function handleSave(submitAfter = false) {
   const qty = Number(form.quantity)
   if (!form.productId || !qty) { ElMessage.warning('请填写产品和数量'); return }
   form.quantity = qty
-  await productionOrderCreate(form)
-  ElMessage.success('保存成功')
-  createVisible.value = false
+  const created: any = await productionOrderCreate(form)
+  if (submitAfter && created?.id) {
+    await productionOrderSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
+async function handleStart(row: any) {
+  await ElMessageBox.confirm('确定开始该工单吗？开始后进入「生产中」，之后才可报工。', '提示', { type: 'warning' })
+  await productionOrderStart(row.id)
+  ElMessage.success('已开始')
+  load()
+}
+
+async function handleFinish(row: any) {
+  await ElMessageBox.confirm('确定将该工单标记为已完工吗？', '提示', { type: 'warning' })
+  await productionOrderFinish(row.id)
+  ElMessage.success('已完工')
+  load()
+}
+
 async function handleSubmit(row: any) {
   await ElMessageBox.confirm('确定提交审批吗？', '提示', { type: 'warning' })
   await productionOrderSubmit(row.id)

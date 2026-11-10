@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="源仓库">
         <el-select v-model="query.sourceWarehouseId" placeholder="全部" clearable filterable style="width: 150px">
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog">新增调拨</el-button>
+      <el-button type="primary" @click="openForm">新增调拨</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -51,42 +51,27 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增调拨" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="源仓库" required>
-        <el-select v-model="form.sourceWarehouseId" placeholder="请选择" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="目标仓库" required>
-        <el-select v-model="form.targetWarehouseId" placeholder="请选择" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">明细</el-divider>
-    <div class="item-toolbar">
+  <!-- 新增调拨：整页单据表单（无审批流） -->
+  <DocForm
+    v-else
+    title="新建调拨单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    hide-add
+    hide-submit
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #tools>
       <el-button type="primary" size="small" @click="pickerVisible = true">添加物料</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="itemName" label="物料" min-width="180" />
-      <el-table-column label="数量" width="130">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
-  </el-dialog>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
 
   <el-dialog v-model="detailVisible" title="调拨明细" width="560px">
     <el-table :data="detailItems" border size="small">
@@ -112,18 +97,20 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Transfer' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { transferList, transferItems, transferCreate } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const warehouses = ref<any[]>([])
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const detailVisible = ref(false)
 const pickerVisible = ref(false)
 const detailItems = ref<any[]>([])
@@ -155,11 +142,43 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.sourceWarehouseId = undefined; query.targetWarehouseId = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  {
+    key: 'sourceWarehouseId',
+    label: '源仓库',
+    type: 'select',
+    required: true,
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  {
+    key: 'targetWarehouseId',
+    label: '目标仓库',
+    type: 'select',
+    required: true,
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'itemName', label: '物料', width: '260' },
+  { key: 'quantity', label: '数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.sourceWarehouseId || !form.targetWarehouseId) { ElMessage.warning('请选择源仓库和目标仓库'); return }
@@ -170,7 +189,7 @@ async function handleSave() {
     items: form.items.map((i: any) => ({ itemId: i.itemId, itemType: i.itemType, quantity: Number(i.quantity), unit: i.unit }))
   })
   ElMessage.success('调拨成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 

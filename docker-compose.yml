@@ -1,10 +1,37 @@
+# ============================================================================
+# Token 制造 ERP —— 一键起全套（本地开发 / 云端部署通用）
+# ============================================================================
+#
+# 用法：
+#   1. 复制 .env.example 为 .env，填两个值（DB_PASSWORD / DASHSCOPE_API_KEY）
+#   2. docker compose up -d --build
+#   3. 打开 http://localhost:8090
+#
+# ⚠️ 起之前要先停掉宿主机的原生 redis（它和容器都抢 6379）。
+#
+# ----------------------------------------------------------------------------
+# 🔴 数据策略：MySQL **留在宿主机，不进容器**（方案 B）
+# ----------------------------------------------------------------------------
+# 这样数据永远只有一份，不会出现「容器里一份、宿主机一份」的分叉。
+# backend / ai 通过 host.docker.internal 连宿主机的 127.0.0.1:3306。
+#
+# 云端部署时：把 .env 里的 DB_HOST 改成 mysql，并把下面注释里的 mysql 服务打开，
+# 那时是全新库，本来就要导入数据，不存在分叉问题。
+#
+# ⚠️ 别用 `docker system prune -a` / `docker volume prune` ——
+#    用户另一个项目的数据库（yxagent-db / postgres）也在 Docker 里，会被一起清掉。
+# ----------------------------------------------------------------------------
+
+name: token-erp
+
 services:
+  # ---------------- Redis ----------------
   redis:
     image: redis:7-alpine
     container_name: token-erp-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PUBLISH_PORT:-6379}:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
@@ -14,5 +41,129 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------------- Java 后端 ----------------
+  backend:
+    build: ./backend
+    container_name: token-erp-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      # host.docker.internal = 容器里访问「宿主机」的固定域名
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-token_erp_demo}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET}
+      # 🔴 宿主机上 WorkBuddy 会注入 SERVER__PORT=59003，Spring Boot 宽松绑定会拿它当端口
+      #    （本地踩过：启动报 "Port 59003 was already in use"）。容器里显式钉死，挡掉漏进来的值。
+      SERVER_PORT: "8080"
+      # 流量录制：把 /api/** 的请求响应推给自动化测试平台（宿主机 8100）
+      # 容器里必须用 host.docker.internal，127.0.0.1 是容器自己
+      ERP_RECORD_URL: ${ERP_RECORD_URL:-http://host.docker.internal:8100}
+      ERP_RECORD_ENABLED: ${ERP_RECORD_ENABLED:-true}
+      TZ: Asia/Shanghai
+    volumes:
+      # 录制文件：容器写 /app/record/record.jsonl，宿主机 D:\erp\_record 直接读
+      - ./_record:/app/record
+    extra_hosts:
+      # Linux 上连宿主机必须显式声明；Windows/Mac 的 Docker Desktop 本来支持
+      - "host.docker.internal:host-gateway"
+
+  # ---------------- 测试后端（连 token_erp_test，Redis db1，写操作不污染演示库） ----------------
+  backend-test:
+    # 复用已构建好的后端镜像，不重编译（重建会重新拉基础镜像层，内网很慢）
+    image: token-erp-backend:latest
+    container_name: token-erp-backend-test
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: token_erp_test        # ← 独立测试库，建库脚本 erp-test/backend/create_test_db.py
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # 🔴 镜像里 application.yml 写死了 database:0，用环境变量覆盖成 db1（Spring 宽松绑定）
+      SPRING_DATA_REDIS_DATABASE: "1"
+      JWT_SECRET: ${JWT_SECRET}
+      SERVER_PORT: "8080"
+      ERP_RECORD_URL: ${ERP_RECORD_URL:-http://host.docker.internal:8100}
+      ERP_RECORD_ENABLED: ${ERP_RECORD_ENABLED:-true}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./_record:/app/record
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ---------------- AI 服务（FastAPI） ----------------
+  ai:
+    build:
+      context: ../erp-ai
+    container_name: token-erp-ai
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      AI_AUTH_ENABLED: ${AI_AUTH_ENABLED:-1}
+      # 数据库：连宿主机那份（数据只有一份）
+      ERP_DB_HOST: ${DB_HOST:-host.docker.internal}
+      ERP_DB_PORT: ${DB_PORT:-3306}
+      ERP_DB_USER: ${DB_USERNAME:-root}
+      ERP_DB_PASSWORD: ${DB_PASSWORD}
+      # 语料与向量缓存走挂载路径（见 volumes），不能再用 D:\ 盘
+      ERP_CORPUS_DIR: /corpus
+      ERP_INDEX_CACHE: /data/index_cache.json
+    volumes:
+      # 语料：只读挂进来
+      - "${CORPUS_DIR_HOST:-D:/zhishiku}:/corpus:ro"
+      # 🔴 向量缓存：**必须挂载**。这是花钱算出来的，不挂的话每次重启都重新向量化。
+      #    挂的是宿主机上那份现成的 index_cache.json，所以启动即「缓存命中」，一分钱不花。
+      - "../erp-ai/index_cache.json:/data/index_cache.json"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ---------------- 前端（Nginx 托管构建产物） ----------------
+  frontend:
+    build: ./frontend
+    container_name: token-erp-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - ai
+    ports:
+      # 用 8090，避开 5173（本地 vite dev）和 5174（用户另一个项目）
+      - "${FRONTEND_PORT:-8090}:80"
+
+# ----------------------------------------------------------------------------
+# 云端部署时再打开这个（本地不用，因为宿主已有 MySQL，数据只有一份）
+# ----------------------------------------------------------------------------
+#  mysql:
+#    image: mysql:8.0
+#    container_name: token-erp-mysql
+#    profiles: ["cloud"]
+#    restart: unless-stopped
+#    environment:
+#      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+#    volumes:
+#      - mysql_data:/var/lib/mysql
+#    # 首次启动自动建库灌数据（把导出的 sql 放进 docker/mysql/init/）
+#    # - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+
 volumes:
   redis_data:
+  # mysql_data:      # 云端部署时一起打开

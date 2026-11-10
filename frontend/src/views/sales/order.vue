@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="销售单号" clearable style="width: 200px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openCreate">新增销售单</el-button>
+      <el-button type="primary" @click="openForm">新增销售单</el-button>
       <el-button @click="doExport">导出</el-button>
     </div>
 
@@ -64,55 +64,56 @@
     />
   </el-card>
 
-  <!-- 新增销售单 -->
-  <el-dialog v-model="createVisible" title="新增销售单" width="800px">
-    <el-form :model="form" label-width="90px">
-      <el-row :gutter="12">
-        <el-col :span="12">
-          <el-form-item label="客户" required>
-            <el-select v-model="form.customerId" filterable remote :remote-method="searchCustomer" :loading="customerLoading" placeholder="搜索客户" clearable style="width: 100%">
-              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12"><el-form-item label="销售类型">
-          <el-select v-model="form.salesType" style="width: 100%">
-            <el-option label="普通销售" value="normal" />
-          </el-select>
-        </el-form-item></el-col>
-        <el-col :span="12"><el-form-item label="交货日期"><el-date-picker v-model="form.deliveryDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item></el-col>
-        <el-col :span="12"><el-form-item label="业务员"><el-input v-model="form.salesman" /></el-form-item></el-col>
-        <el-col :span="24"><el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item></el-col>
-      </el-row>
-    </el-form>
-    <div class="item-toolbar"><span>销售明细</span><el-button size="small" type="primary" @click="addItem">添加明细</el-button></div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column label="产品" min-width="200">
-        <template #default="{ row }">
-          <div class="picker-cell">
-            <template v-if="row.productId">
-              <span class="picker-name">{{ row.productCode }} {{ row.productName }}</span>
-              <span class="picker-spec">{{ row.spec }}</span>
-            </template>
-            <span v-else class="picker-empty">未选择产品</span>
-          </div>
-          <el-button link size="small" type="primary" @click="openProductPicker(row)">
-            {{ row.productId ? '更换' : '选择产品' }}
-          </el-button>
-        </template>
-      </el-table-column>
-      <el-table-column label="数量" width="120"><template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template></el-table-column>
-      <el-table-column label="含税单价" width="130"><template #default="{ row }"><el-input v-model="row.price" size="small" placeholder="单价" /></template></el-table-column>
-      <el-table-column label="税率%" width="100"><template #default="{ row }"><el-input v-model="row.taxRate" size="small" placeholder="税率" /></template></el-table-column>
-      <el-table-column label="单位" width="90"><template #default="{ row }">{{ row.unit }}</template></el-table-column>
-      <el-table-column label="价税合计" width="110" align="right"><template #default="{ row }">{{ ((row.quantity||0)*(row.price||0)).toFixed(2) }}</template></el-table-column>
-      <el-table-column label="操作" width="70"><template #default="{ $index }"><el-button link type="danger" @click="form.items.splice($index,1)">删除</el-button></template></el-table-column>
-    </el-table>
-    <template #footer>
-      <el-button @click="createVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreate">保存</el-button>
+  <!-- 新增销售单：整页单据表单 -->
+  <DocForm
+    v-else
+    title="新建销售订单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    @update:items="(v) => (form.items = v)"
+    @add="addItem"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-customerId>
+      <el-select
+        v-model="form.customerId"
+        filterable
+        remote
+        :remote-method="searchCustomer"
+        :loading="customerLoading"
+        placeholder="搜索客户"
+        clearable
+        size="small"
+        style="width: 100%"
+      >
+        <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
     </template>
-  </el-dialog>
+
+    <template #col-product="{ row }">
+      <div class="picker-cell">
+        <template v-if="row.productId">
+          <span class="picker-name">{{ row.productCode }} {{ row.productName }}</span>
+          <span class="picker-spec">{{ row.spec }}</span>
+        </template>
+        <span v-else class="picker-empty">未选择产品</span>
+      </div>
+      <el-button link size="small" type="primary" @click="openProductPicker(row._uid)">
+        {{ row.productId ? '更换' : '选择产品' }}
+      </el-button>
+    </template>
+
+    <template #col-total="{ row }">{{ ((row.quantity || 0) * (row.price || 0)).toFixed(2) }}</template>
+
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+      <span>价税合计：￥{{ sumAmount }}</span>
+    </template>
+  </DocForm>
 
   <!-- 出库 -->
   <el-dialog v-model="outboundVisible" title="销售出库" width="600px">
@@ -255,7 +256,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'SalesOrder' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   salesOrderList, salesOrderItems, salesOrderCreate, salesOrderSubmit,
@@ -263,6 +264,8 @@ import {
 } from '@/api/sales'
 import { customerList, warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
@@ -270,7 +273,7 @@ const records = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
 
-const createVisible = ref(false)
+const formVisible = ref(false)
 
 // 客户下拉
 const customers = ref<any[]>([])
@@ -278,6 +281,8 @@ const customerLoading = ref(false)
 // 产品选择
 const productPickerVisible = ref(false)
 const currentProductRow = ref<any>(null)
+/** 当前选产品要写回的行（用 _uid 定位：跨组件传对象拿不到同一引用，$index 也取不到） */
+const currentRowUid = ref<number>(-1)
 const pickerTarget = ref<'row' | 'return'>('row')
 // 仓库下拉
 const warehouses = ref<any[]>([])
@@ -312,9 +317,9 @@ async function searchCustomer(keyword: string) {
   }
 }
 
-function openProductPicker(row: any) {
+function openProductPicker(uid: number) {
   pickerTarget.value = 'row'
-  currentProductRow.value = row
+  currentRowUid.value = uid
   productPickerVisible.value = true
 }
 
@@ -327,12 +332,16 @@ function onProductSelected(product: any) {
   if (pickerTarget.value === 'return') {
     returnForm.productId = product.id
     returnForm.productName = product.name
-  } else if (currentProductRow.value) {
-    currentProductRow.value.productId = product.id
-    currentProductRow.value.productCode = product.code
-    currentProductRow.value.productName = product.name
-    currentProductRow.value.spec = product.spec
-    currentProductRow.value.unit = product.unit
+  } else {
+    const row = form.items.find((r: any) => r._uid === currentRowUid.value)
+    if (row) {
+      row.productId = product.id
+      row.productCode = product.code
+      row.productName = product.name
+      row.spec = product.spec
+      row.unit = product.unit
+      form.items = [...form.items] // 换新数组强制表格重渲染
+    }
   }
 }
 
@@ -371,15 +380,52 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openCreate() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   form.salesType = 'normal'
   searchCustomer('')
-  createVisible.value = true
+  formVisible.value = true
 }
-function addItem() { form.items.push({ productId: undefined, productName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' }) }
-async function handleCreate() {
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段（5 列网格） */
+const docFields: DocField[] = [
+  { key: 'customerId', label: '客户', type: 'slot', required: true },
+  {
+    key: 'salesType',
+    label: '销售类型',
+    type: 'select',
+    options: [{ label: '普通销售', value: 'normal' }]
+  },
+  { key: 'deliveryDate', label: '交货日期', type: 'date' },
+  { key: 'salesman', label: '业务员' },
+  { key: 'remark', label: '备注', span: 2 }
+]
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'product', label: '产品名称', width: '260' },
+  { key: 'quantity', label: '数量', width: '110', type: 'input', align: 'right', placeholder: '数量' },
+  { key: 'price', label: '含税单价', width: '120', type: 'input', align: 'right', placeholder: '单价' },
+  { key: 'taxRate', label: '税率%', width: '90', type: 'input', align: 'right', placeholder: '税率' },
+  { key: 'unit', label: '基本单位', width: '90' },
+  { key: 'total', label: '价税合计', width: '120', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
+const sumAmount = computed(() =>
+  form.items
+    .reduce((s: number, r: any) => s + (Number(r.quantity) || 0) * (Number(r.price) || 0), 0)
+    .toFixed(2)
+)
+
+function addItem() { form.items.push({ _uid: Date.now() + Math.floor(Math.random() * 100000), productId: undefined, productName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' }) }
+async function handleSave(submitAfter = false) {
   if (!form.customerId) { ElMessage.warning('请选择客户'); return }
   if (!form.items.length) { ElMessage.warning('请至少添加一条明细'); return }
   for (const item of form.items) {
@@ -390,9 +436,14 @@ async function handleCreate() {
     item.price = Number(item.price) || 0
     item.taxRate = Number(item.taxRate) || 0
   }
-  await salesOrderCreate(form)
-  ElMessage.success('保存成功')
-  createVisible.value = false
+  const created: any = await salesOrderCreate(form)
+  if (submitAfter && created?.id) {
+    await salesOrderSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 async function handleSubmit(row: any) {

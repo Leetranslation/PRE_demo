@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="备货单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -11,7 +11,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增备货单</el-button>
+      <el-button type="primary" @click="openForm()">新增备货单</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -43,52 +43,59 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增备货单" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="销售订单">
-        <el-select v-model="form.orderId" placeholder="可选" clearable filterable style="width: 100%">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">备货明细</el-divider>
-    <div class="item-toolbar">
+  <!-- 新增备货单：整页单据表单 -->
+  <DocForm
+    v-else
+    title="新建备货单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    :pick-labels="pickLabels"
+    @pick="onPick"
+    hide-add
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #tools>
       <el-button type="primary" size="small" @click="productPickerVisible = true">添加产品</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="productName" label="产品" min-width="160" />
-      <el-table-column label="数量" width="120">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
-  </el-dialog>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择销售订单"
+    keyword-placeholder="销售单号 / 客户 / 产品"
+    :columns="SALES_ORDER_COLS"
+    :fetcher="(p) => salesOrderList(p as any)"
+    @select="applyOrder"
+  />
 
   <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'SalesStocking' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { salesStockingList, salesStockingCreate, salesStockingSubmit, salesStockingApprove, salesOrderList } from '@/api/sales'
 import ProductPicker from '@/components/ProductPicker.vue'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import { SALES_ORDER_COLS } from '@/components/docPickerPresets'
+import type { DocColumn, DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
 const productPickerVisible = ref(false)
 const orders = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
@@ -120,21 +127,61 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
+  pickedOrder.value = null
   loadOrders()
-  dialogVisible.value = true
+  formVisible.value = true
+}
+function closeForm() {
+  formVisible.value = false
 }
 
-async function handleSave() {
+const pickLabels = computed<Record<string, string>>(() => ({
+  orderId: pickedOrder.value
+    ? `${pickedOrder.value.orderNo}  ${pickedOrder.value.customerName || ''}  ￥${pickedOrder.value.totalAmount ?? ''}`
+    : ''
+}))
+
+function onPick(key: string) {
+  if (key === 'orderId') orderPickerVisible.value = true
+}
+
+function applyOrder(o: any) {
+  pickedOrder.value = o
+  form.orderId = o.id
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  { key: 'orderId', label: '销售订单', type: 'pick', placeholder: '可选，不选则按纯备货' },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'productName', label: '产品', width: '260' },
+  { key: 'quantity', label: '数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
+
+async function handleSave(submitAfter = false) {
   if (!form.items || form.items.length === 0) { ElMessage.warning('请添加备货明细'); return }
-  await salesStockingCreate({
+  const created: any = await salesStockingCreate({
     orderId: form.orderId, remark: form.remark,
     items: form.items.map((i: any) => ({ productId: i.productId, quantity: Number(i.quantity) }))
   })
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
+  if (submitAfter && created?.id) {
+    await salesStockingSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 

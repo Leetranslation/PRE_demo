@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="外协类型">
         <el-select v-model="query.inboundType" style="width: 150px" @change="handleSearch">
@@ -13,7 +13,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog">新增外协入库</el-button>
+      <el-button type="primary" @click="openForm">新增外协入库</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -50,46 +50,39 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增外协入库" width="720px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="外协单" required>
-        <el-select v-model="form.outsourceId" placeholder="请选择外协单" filterable style="width: 100%" @change="onOutsourceChange">
-          <el-option v-for="o in outsourceOrders" :key="o.id" :label="`${o.orderNo} (${o.type === 'whole' ? '整单' : '工序'})`" :value="o.id" />
-        </el-select>
-        <div class="tip">仅可选「已审批」的外协单</div>
-      </el-form-item>
-      <el-form-item label="仓库" required>
-        <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">入库明细（收回产品/半成品）</el-divider>
-    <div class="item-toolbar">
+  <!-- 新增外协入库：整页单据表单（无审批流） -->
+  <DocForm
+    v-else
+    title="新建外协入库"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    :pick-labels="pickLabels"
+    @pick="onPick"
+    hide-add
+    hide-submit
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #field-outsourceId />
+    <template #tools>
       <el-button type="primary" size="small" @click="pickerVisible = true">添加产品</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="productName" label="产品" min-width="180" />
-      <el-table-column label="数量" width="130">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="批次号" width="130">
-        <template #default="{ row }"><el-input v-model="row.batchNo" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
-  </el-dialog>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
+
+  <DocPicker
+    v-model="outsourcePickerVisible"
+    title="选择外协单"
+    keyword-placeholder="外协单号 / 供应商"
+    :columns="OUTSOURCE_ORDER_COLS"
+    :fetcher="(p) => outsourceOrderList(p as any)"
+    @select="applyOutsource"
+  />
 
   <el-dialog v-model="detailVisible" title="入库明细" width="560px">
     <el-table :data="detailItems" border size="small">
@@ -105,13 +98,17 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'OutsourceInbound' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import { productionInboundList, productionInboundCreate, productionOrderList } from '@/api/production'
 import { outsourceOrderList } from '@/api/outsource'
 import { warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import { OUTSOURCE_ORDER_COLS } from '@/components/docPickerPresets'
+import type { DocColumn, DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -119,7 +116,9 @@ const total = ref(0)
 const outsourceOrders = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const orders = ref<any[]>([])
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const outsourcePickerVisible = ref(false)
+const pickedOutsource = ref<any>(null)
 const detailVisible = ref(false)
 const pickerVisible = ref(false)
 const detailItems = ref<any[]>([])
@@ -163,11 +162,55 @@ async function load() {
 
 function handleSearch() { query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
-  dialogVisible.value = true
+  pickedOutsource.value = null
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+const pickLabels = computed<Record<string, string>>(() => ({
+  outsourceId: pickedOutsource.value
+    ? `${pickedOutsource.value.orderNo}  ${pickedOutsource.value.type === 'whole' ? '整单外协' : '工序外协'}  ${pickedOutsource.value.supplierName || ''}`
+    : ''
+}))
+
+function onPick(key: string) {
+  if (key === 'outsourceId') outsourcePickerVisible.value = true
+}
+
+function applyOutsource(o: any) {
+  pickedOutsource.value = o
+  form.outsourceId = o.id
+  onOutsourceChange(o.id)
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  { key: 'outsourceId', label: '外协单', type: 'pick', required: true },
+  {
+    key: 'warehouseId',
+    label: '仓库',
+    type: 'select',
+    required: true,
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'productName', label: '产品', width: '260' },
+  { key: 'quantity', label: '数量', width: '110', type: 'input', align: 'right' },
+  { key: 'batchNo', label: '批次号', width: '140', type: 'input' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.outsourceId) { ElMessage.warning('请选择外协单'); return }
@@ -185,7 +228,7 @@ async function handleSave() {
     items: form.items.map((i: any) => ({ productId: i.productId, quantity: Number(i.quantity), batchNo: i.batchNo }))
   })
   ElMessage.success('外协入库成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 

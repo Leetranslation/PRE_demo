@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="客户">
         <el-select v-model="query.customerId" placeholder="全部" clearable filterable style="width: 200px">
@@ -20,7 +20,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增收款</el-button>
+      <el-button type="primary" @click="openForm()">新增收款</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe>
@@ -56,24 +56,25 @@
     />
   </el-card>
 
-  <!-- 新增收款 -->
-  <el-dialog v-model="dialogVisible" title="新增收款" width="520px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="客户" required>
-        <el-select v-model="form.customerId" filterable placeholder="选择客户" style="width: 100%">
-          <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="收款金额" required><el-input v-model="form.amount" type="number" /></el-form-item>
-      <el-form-item label="收款日期"><el-date-picker v-model="form.receiptDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item>
-      <el-form-item label="收款账户"><el-input v-model="form.account" placeholder="如：基本户" /></el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增收款：整页单据表单（无明细） -->
+  <DocForm
+    v-else
+    title="新建收款单"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    hide-submit
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #field-customerId>
+      <el-select v-model="form.customerId" filterable placeholder="选择客户" size="small" style="width: 100%">
+        <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
     </template>
-  </el-dialog>
+  </DocForm>
 
   <!-- 核销应收 -->
   <el-dialog v-model="writeoffVisible" :title="'核销收款单 ' + currentReceipt.receiptNo" width="760px">
@@ -122,6 +123,8 @@
 <script setup lang="ts">
 defineOptions({ name: 'Receipt' })
 import { reactive, ref } from 'vue'
+import type { DocField } from '@/components/docForm'
+import DocForm from '@/components/DocForm.vue'
 import { ElMessage } from 'element-plus'
 import { receiptList, receiptCreate, receiptWriteoff, receiptWriteoffItems, receivableList } from '@/api/finance'
 import { customerList } from '@/api/base'
@@ -133,7 +136,7 @@ const total = ref(0)
 const customers = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, customerId: undefined as number | undefined, status: undefined as string | undefined })
 
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const writeoffVisible = ref(false)
 const itemsVisible = ref(false)
 const form = reactive<any>({})
@@ -163,10 +166,22 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.customerId = undefined; query.status = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields: DocField[] = [
+  { key: 'customerId', label: '客户', type: 'slot', required: true },
+  { key: 'amount', label: '收款金额', required: true },
+  { key: 'receiptDate', label: '收款日期', type: 'date' },
+  { key: 'account', label: '收款账户', placeholder: '如：基本户' },
+  { key: 'remark', label: '备注', span: 2 }
+]
 
 async function handleSave() {
   if (!form.customerId || form.amount == null || Number(form.amount) <= 0) {
@@ -175,7 +190,7 @@ async function handleSave() {
   }
   await receiptCreate({ ...form, amount: Number(form.amount) })
   ElMessage.success('保存成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 

@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { materialList } from '@/api/base'
 
 const props = defineProps<{ modelValue: boolean }>()
@@ -47,17 +47,23 @@ const emit = defineEmits<{
   (e: 'select', material: any): void
 }>()
 
-const visible = ref(false)
+/**
+ * 🔴 单一数据源：直接代理父组件的值，**不在内部另存一份 visible**。
+ * 之前的写法是本地 ref + 单向 watch —— 用户点右上角 X 关闭时，
+ * 内部 visible 变 false 但从未通知父组件，父组件的 pickerVisible 仍是 true；
+ * 之后再点「选择物料」传进来的还是 true，watch 不触发 → 弹窗再也打不开（已踩，严重）。
+ */
+const visible = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit('update:modelValue', v)
+})
+
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const keyword = ref('')
 const page = ref(1)
 const pageSize = ref(10)
-
-// 同步外部 modelValue
-import { watch } from 'vue'
-watch(() => props.modelValue, (v) => { visible.value = v })
 
 function supplyText(v: string) {
   return { purchase: '采购', make: '自制', purchase_make: '采购+自制' }[v] || v
@@ -76,8 +82,7 @@ async function load() {
 
 function select(row: any) {
   emit('select', row)
-  visible.value = false
-  emit('update:modelValue', false)
+  visible.value = false // 通过 setter 通知父组件，父子状态不会再分叉
 }
 </script>
 

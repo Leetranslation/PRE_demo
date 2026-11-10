@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="采购单号" clearable style="width: 200px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增采购单</el-button>
+      <el-button type="primary" @click="openForm()">新增采购单</el-button>
       <el-button @click="doExport">导出</el-button>
     </div>
 
@@ -63,76 +63,56 @@
     />
   </el-card>
 
-  <!-- 新增采购单 -->
-  <el-dialog v-model="dialogVisible" title="新增采购单" width="820px">
-    <el-form :model="form" label-width="90px">
-      <el-row :gutter="12">
-        <el-col :span="12">
-          <el-form-item label="供应商" required>
-            <el-select v-model="form.supplierId" filterable remote :remote-method="searchSupplier" :loading="supplierLoading" placeholder="搜索供应商" clearable style="width: 100%">
-              <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12"><el-form-item label="采购类型">
-          <el-select v-model="form.purchaseType" style="width: 100%">
-            <el-option label="备货采购" value="stock" />
-            <el-option label="生产采购" value="production" />
-            <el-option label="MRP采购" value="mrp" />
-          </el-select>
-        </el-form-item></el-col>
-        <el-col :span="12"><el-form-item label="预计到货"><el-date-picker v-model="form.expectedDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item></el-col>
-        <el-col :span="12"><el-form-item label="采购员"><el-input v-model="form.buyer" /></el-form-item></el-col>
-        <el-col :span="24"><el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item></el-col>
-      </el-row>
-    </el-form>
-
-    <div class="item-toolbar">
-      <span>采购明细</span>
-      <el-button size="small" type="primary" @click="addItem">添加明细</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column label="物料" min-width="220">
-        <template #default="{ row }">
-          <div class="material-cell">
-            <template v-if="row.materialId">
-              <span class="material-name">{{ row.materialCode }} {{ row.materialName }}</span>
-              <span class="material-spec">{{ row.spec }}</span>
-            </template>
-            <template v-else>
-              <span class="material-empty">未选择物料</span>
-            </template>
-          </div>
-          <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
-            {{ row.materialId ? '更换' : '选择物料' }}
-          </el-button>
-        </template>
-      </el-table-column>
-      <el-table-column label="数量" width="120">
-        <template #default="{ row }"><el-input v-model="row.quantity" size="small" placeholder="数量" /></template>
-      </el-table-column>
-      <el-table-column label="含税单价" width="130">
-        <template #default="{ row }"><el-input v-model="row.price" size="small" placeholder="单价" /></template>
-      </el-table-column>
-      <el-table-column label="税率%" width="100">
-        <template #default="{ row }"><el-input v-model="row.taxRate" size="small" placeholder="税率" /></template>
-      </el-table-column>
-      <el-table-column label="单位" width="90">
-        <template #default="{ row }">{{ row.unit }}</template>
-      </el-table-column>
-      <el-table-column label="价税合计" width="120" align="right">
-        <template #default="{ row }">{{ calcTotal(row) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }"><el-button link type="danger" @click="form.items.splice($index, 1)">删除</el-button></template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增采购单：整页单据表单 -->
+  <DocForm
+    v-else
+    title="新建采购订单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    @update:items="(v) => (form.items = v)"
+    @add="addItem"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-supplierId>
+      <el-select
+        v-model="form.supplierId"
+        filterable
+        remote
+        :remote-method="searchSupplier"
+        :loading="supplierLoading"
+        placeholder="搜索供应商"
+        clearable
+        size="small"
+        style="width: 100%"
+      >
+        <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id" />
+      </el-select>
     </template>
-  </el-dialog>
+
+    <template #col-material="{ row }">
+      <div class="material-cell">
+        <template v-if="row.materialId">
+          <span class="material-name">{{ row.materialCode }} {{ row.materialName }}</span>
+          <span class="material-spec">{{ row.spec }}</span>
+        </template>
+        <span v-else class="material-empty">未选择物料</span>
+      </div>
+      <el-button link size="small" type="primary" @click="openMaterialPicker(row)">
+        {{ row.materialId ? '更换' : '选择物料' }}
+      </el-button>
+    </template>
+
+    <template #col-total="{ row }">{{ calcTotal(row) }}</template>
+
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+      <span>价税合计：￥{{ sumAmount }}</span>
+    </template>
+  </DocForm>
 
   <!-- 明细查看 -->
   <el-dialog v-model="itemsVisible" title="采购明细" width="760px">
@@ -201,7 +181,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'PurchaseOrder' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   purchaseOrderList, purchaseOrderItems, purchaseOrderCreate,
@@ -210,12 +190,15 @@ import {
 import { supplierList, warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 import { useExport } from '@/composables/useExport'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+/** 整页表单是否展开（true = 隐藏列表、显示新建页） */
+const formVisible = ref(false)
 const itemsVisible = ref(false)
 const items = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, keyword: '', approveStatus: undefined as string | undefined })
@@ -345,19 +328,60 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   form.purchaseType = 'stock'
   searchSupplier('')
-  dialogVisible.value = true
+  formVisible.value = true
 }
+
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段（5 列网格） */
+const docFields: DocField[] = [
+  { key: 'supplierId', label: '供应商', type: 'slot', required: true },
+  {
+    key: 'purchaseType',
+    label: '采购类型',
+    type: 'select',
+    options: [
+      { label: '备货采购', value: 'stock' },
+      { label: '生产采购', value: 'production' },
+      { label: 'MRP采购', value: 'mrp' }
+    ]
+  },
+  { key: 'expectedDate', label: '预计到货', type: 'date' },
+  { key: 'buyer', label: '采购员' },
+  { key: 'remark', label: '备注', span: 2 }
+]
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'material', label: '物料名称', width: '260' },
+  { key: 'quantity', label: '数量', width: '110', type: 'input', align: 'right', placeholder: '数量' },
+  { key: 'price', label: '含税单价', width: '120', type: 'input', align: 'right', placeholder: '单价' },
+  { key: 'taxRate', label: '税率%', width: '90', type: 'input', align: 'right', placeholder: '税率' },
+  { key: 'unit', label: '基本单位', width: '90' },
+  { key: 'total', label: '价税合计', width: '120', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
+const sumAmount = computed(() =>
+  form.items
+    .reduce((s: number, r: any) => s + (Number(r.quantity) || 0) * (Number(r.price) || 0), 0)
+    .toFixed(2)
+)
 
 function addItem() {
   form.items.push({ materialId: undefined, materialName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' })
 }
 
-async function handleSave() {
+async function handleSave(submitAfter = false) {
   if (!form.supplierId) {
     ElMessage.warning('请选择供应商')
     return
@@ -381,9 +405,14 @@ async function handleSave() {
     item.price = Number(item.price) || 0
     item.taxRate = Number(item.taxRate) || 0
   }
-  await purchaseOrderCreate(form)
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
+  const created: any = await purchaseOrderCreate(form)
+  if (submitAfter && created?.id) {
+    await purchaseOrderSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 

@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { productList } from '@/api/base'
 
 const props = defineProps<{ modelValue: boolean }>()
@@ -44,15 +44,18 @@ const emit = defineEmits<{
   (e: 'select', product: any): void
 }>()
 
-const visible = ref(false)
+/** 🔴 单一数据源：直接代理父组件的值（同 MaterialPicker，见那里的说明） */
+const visible = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit('update:modelValue', v)
+})
+
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
 const keyword = ref('')
 const page = ref(1)
 const pageSize = ref(10)
-
-watch(() => props.modelValue, (v) => { visible.value = v })
 
 async function load() {
   loading.value = true
@@ -67,8 +70,7 @@ async function load() {
 
 function select(row: any) {
   emit('select', row)
-  visible.value = false
-  emit('update:modelValue', false)
+  visible.value = false // 通过 setter 通知父组件
 }
 </script>
 

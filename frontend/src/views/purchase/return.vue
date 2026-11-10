@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="订单">
         <el-select v-model="query.orderId" placeholder="全部" clearable filterable style="width: 200px">
@@ -13,7 +13,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增退货</el-button>
+      <el-button type="primary" @click="openForm()">新增退货</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -41,42 +41,38 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增采购退货（库存出库）" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="采购订单" required>
-        <el-select v-model="form.orderId" placeholder="请选择订单" filterable style="width: 100%">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="出库仓库">
-        <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">退货明细</el-divider>
-    <div class="item-toolbar">
+  <!-- 新增采购退货：整页单据表单（无审批流，隐藏提交） -->
+  <DocForm
+    v-else
+    title="新建采购退货（库存出库）"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    :pick-labels="pickLabels"
+    @pick="onPick"
+    hide-add
+    hide-submit
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave()"
+  >
+    <template #tools>
       <el-button type="primary" size="small" @click="materialPickerVisible = true">添加物料</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="materialName" label="物料" min-width="160" />
-      <el-table-column label="退货数量" width="130">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
-  </el-dialog>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择采购订单"
+    keyword-placeholder="采购单号 / 供应商 / 物料"
+    :columns="PURCHASE_ORDER_COLS"
+    :fetcher="(p) => purchaseOrderList(p as any)"
+    @select="applyOrder"
+  />
 
   <el-dialog v-model="detailVisible" title="退货明细" width="560px">
     <el-table :data="detailItems" border size="small">
@@ -100,17 +96,23 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'PurchaseReturn' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { purchaseReturnList, purchaseReturnCreate, purchaseReturnItems, purchaseOrderList } from '@/api/purchase'
 import { warehouseList } from '@/api/base'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import { PURCHASE_ORDER_COLS } from '@/components/docPickerPresets'
+import type { DocColumn, DocField } from '@/components/docForm'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
 const detailVisible = ref(false)
 const materialPickerVisible = ref(false)
 const orders = ref<any[]>([])
@@ -146,13 +148,54 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.orderId = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
+  pickedOrder.value = null
   loadOrders()
   loadWarehouses()
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+const pickLabels = computed<Record<string, string>>(() => ({
+  orderId: pickedOrder.value
+    ? `${pickedOrder.value.orderNo}  ${pickedOrder.value.supplierName || ''}  ￥${pickedOrder.value.totalAmount ?? ''}`
+    : ''
+}))
+
+function onPick(key: string) {
+  if (key === 'orderId') orderPickerVisible.value = true
+}
+
+function applyOrder(o: any) {
+  pickedOrder.value = o
+  form.orderId = o.id
+}
+
+/** 基本信息字段（下拉选项随数据加载刷新，所以用 computed） */
+const docFields = computed<DocField[]>(() => [
+  { key: 'orderId', label: '采购订单', type: 'pick', required: true },
+  {
+    key: 'warehouseId',
+    label: '出库仓库',
+    type: 'select',
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'materialName', label: '物料', width: '260' },
+  { key: 'quantity', label: '退货数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.orderId || !form.items || form.items.length === 0) { ElMessage.warning('请选择订单并添加退货明细'); return }
@@ -161,7 +204,7 @@ async function handleSave() {
     items: form.items.map((i: any) => ({ materialId: i.materialId, quantity: Number(i.quantity) }))
   })
   ElMessage.success('退货成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
         <el-input v-model="query.keyword" placeholder="报价单号" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -18,7 +18,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增报价单</el-button>
+      <el-button type="primary" @click="openForm()">新增报价单</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -64,57 +64,43 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增报价单" width="760px">
-    <el-form :model="form" label-width="100px">
-      <el-row :gutter="12">
-        <el-col :span="12">
-          <el-form-item label="客户" required>
-            <el-select v-model="form.customerId" filterable remote :remote-method="searchCustomer" :loading="customerLoading" placeholder="搜索客户" clearable style="width: 100%">
-              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="业务员"><el-input v-model="form.salesman" /></el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="有效期至">
-            <el-date-picker v-model="form.validUntil" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="24">
-          <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-        </el-col>
-      </el-row>
-    </el-form>
-
-    <el-divider content-position="left">报价明细</el-divider>
-    <div class="item-toolbar">
-      <el-button type="primary" size="small" @click="productPickerVisible = true">添加产品</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="productName" label="产品" min-width="160" />
-      <el-table-column label="数量" width="120">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="含税单价" width="130">
-        <template #default="{ row }"><el-input v-model="row.price" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="税率%" width="100">
-        <template #default="{ row }"><el-input v-model="row.taxRate" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增报价单：整页单据表单 -->
+  <DocForm
+    v-else
+    title="新建报价单"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    hide-add
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave(false)"
+    @submit="handleSave(true)"
+  >
+    <template #field-customerId>
+      <el-select
+        v-model="form.customerId"
+        filterable
+        remote
+        :remote-method="searchCustomer"
+        :loading="customerLoading"
+        placeholder="搜索客户"
+        clearable
+        size="small"
+        style="width: 100%"
+      >
+        <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
     </template>
-  </el-dialog>
+    <template #tools>
+      <el-button type="primary" size="small" @click="productPickerVisible = true">添加产品</el-button>
+    </template>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+      <span>价税合计：￥{{ sumAmount }}</span>
+    </template>
+  </DocForm>
 
   <ProductPicker v-model="productPickerVisible" @select="onProductSelect" />
 
@@ -135,17 +121,19 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Quotation' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { quotationList, quotationItems, quotationCreate, quotationSubmit, quotationApprove, quotationUnapprove, quotationConvert } from '@/api/sales'
 import { customerList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const productPickerVisible = ref(false)
 const customers = ref<any[]>([])
 const customerLoading = ref(false)
@@ -179,18 +167,46 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.keyword = ''; query.approveStatus = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   searchCustomer('')
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields: DocField[] = [
+  { key: 'customerId', label: '客户', type: 'slot', required: true },
+  { key: 'salesman', label: '业务员' },
+  { key: 'validUntil', label: '有效期至', type: 'date' },
+  { key: 'remark', label: '备注', span: 2 }
+]
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'productName', label: '产品', width: '240' },
+  { key: 'quantity', label: '数量', width: '110', type: 'input', align: 'right' },
+  { key: 'price', label: '含税单价', width: '120', type: 'input', align: 'right' },
+  { key: 'taxRate', label: '税率%', width: '90', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
+const sumAmount = computed(() =>
+  form.items
+    .reduce((s: number, r: any) => s + (Number(r.quantity) || 0) * (Number(r.price) || 0), 0)
+    .toFixed(2)
+)
 
 function onProductSelect(product: any) {
   form.items.push({ productId: product.id, productName: `${product.code} ${product.name}`, quantity: 1, price: 0, taxRate: 13 })
 }
 
-async function handleSave() {
+async function handleSave(submitAfter = false) {
   if (!form.customerId) { ElMessage.warning('请选择客户'); return }
   if (!form.items || form.items.length === 0) { ElMessage.warning('请添加报价明细'); return }
   const payload = {
@@ -203,9 +219,14 @@ async function handleSave() {
       quantity: Number(i.quantity), price: Number(i.price), taxRate: Number(i.taxRate), remark: i.remark
     }))
   }
-  await quotationCreate(payload)
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
+  const created: any = await quotationCreate(payload)
+  if (submitAfter && created?.id) {
+    await quotationSubmit(created.id)
+    ElMessage.success('已保存并提交')
+  } else {
+    ElMessage.success('保存成功')
+  }
+  formVisible.value = false
   load()
 }
 

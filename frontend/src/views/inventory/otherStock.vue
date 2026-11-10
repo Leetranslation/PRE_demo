@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="方向">
         <el-select v-model="query.direction" placeholder="全部" clearable style="width: 120px">
@@ -23,7 +23,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增其他出入库</el-button>
+      <el-button type="primary" @click="openForm()">新增其他出入库</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -58,57 +58,42 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增其他出入库" width="680px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="方向" required>
-        <el-radio-group v-model="form.direction">
-          <el-radio-button value="in">入库</el-radio-button>
-          <el-radio-button value="out">出库</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="类型">
-        <el-select v-model="form.type" placeholder="请选择" style="width: 100%">
-          <el-option label="期初" value="期初" />
-          <el-option label="盘盈" value="盘盈" />
-          <el-option label="盘亏" value="盘亏" />
-          <el-option label="领用" value="领用" />
-          <el-option label="其他" value="其他" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="仓库">
-        <el-select v-model="form.warehouseId" placeholder="请选择" filterable style="width: 100%">
-          <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-
-    <el-divider content-position="left">明细</el-divider>
-    <div class="item-toolbar">
-      <el-button type="primary" size="small" @click="pickerVisible = true">添加物料</el-button>
-    </div>
-    <el-table :data="form.items" border size="small">
-      <el-table-column prop="itemName" label="物料" min-width="160" />
-      <el-table-column label="数量" width="130">
-        <template #default="{ row }"><el-input v-model="row.quantity" type="number" size="small" /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="70">
-        <template #default="{ $index }">
-          <el-button link type="danger" @click="form.items.splice($index, 1)">移除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增其他出入库：整页单据表单（无审批流） -->
+  <DocForm
+    v-else
+    title="新建其他出入库"
+    :model-value="form"
+    :items="form.items"
+    :fields="docFields"
+    :columns="docColumns"
+    hide-add
+    hide-submit
+    @update:items="(v) => (form.items = v)"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #field-direction>
+      <el-radio-group v-model="form.direction">
+        <el-radio-button value="in">入库</el-radio-button>
+        <el-radio-button value="out">出库</el-radio-button>
+      </el-radio-group>
     </template>
-  </el-dialog>
+    <template #tools>
+      <el-button type="primary" size="small" @click="pickerVisible = true">添加物料</el-button>
+    </template>
+    <template #summary>
+      <span>数量合计：{{ sumQty }}</span>
+    </template>
+  </DocForm>
 
-  <el-dialog v-model="detailVisible" title="明细" width="560px">
+  <el-dialog v-model="detailVisible" title="明细" width="660px">
     <el-table :data="detailItems" border size="small">
-      <el-table-column prop="itemName" label="物料/产品" width="140" />
+      <el-table-column type="index" label="序号" width="56" align="center" />
+      <el-table-column prop="itemCode" label="编号" width="140" />
+      <el-table-column prop="itemName" label="物料/产品名称" min-width="160" />
+      <el-table-column prop="itemType" label="类型" width="90" />
       <el-table-column prop="quantity" label="数量" width="110" align="right" />
+      <el-table-column prop="unit" label="单位" width="80" />
     </el-table>
   </el-dialog>
 
@@ -127,18 +112,20 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'OtherStock' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { otherStockList, otherStockCreate } from '@/api/inventory'
+import { otherStockList, otherStockCreate, otherStockItems } from '@/api/inventory'
 import { warehouseList } from '@/api/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import type { DocColumn, DocField } from '@/components/docForm'
 import request from '@/utils/request'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const detailVisible = ref(false)
 const pickerVisible = ref(false)
 const warehouses = ref<any[]>([])
@@ -169,13 +156,50 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.direction = undefined; query.type = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   form.items = []
   form.direction = 'in'
   loadWarehouses()
-  dialogVisible.value = true
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields = computed<DocField[]>(() => [
+  { key: 'direction', label: '方向', type: 'slot', required: true },
+  {
+    key: 'type',
+    label: '类型',
+    type: 'select',
+    options: [
+      { label: '期初', value: '期初' },
+      { label: '盘盈', value: '盘盈' },
+      { label: '盘亏', value: '盘亏' },
+      { label: '领用', value: '领用' },
+      { label: '其他', value: '其他' }
+    ]
+  },
+  {
+    key: 'warehouseId',
+    label: '仓库',
+    type: 'select',
+    options: warehouses.value.map((w: any) => ({ label: w.name, value: w.id }))
+  },
+  { key: 'remark', label: '备注', span: 2 }
+])
+
+/** 明细列 */
+const docColumns: DocColumn[] = [
+  { key: 'itemName', label: '物料', width: '260' },
+  { key: 'quantity', label: '数量', width: '120', type: 'input', align: 'right' }
+]
+
+const sumQty = computed(() =>
+  form.items.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0)
+)
 
 async function handleSave() {
   if (!form.direction || !form.items || form.items.length === 0) { ElMessage.warning('请选择方向并添加明细'); return }
@@ -185,12 +209,13 @@ async function handleSave() {
     items: form.items.map((i: any) => ({ itemId: i.itemId, itemType: i.itemType, quantity: Number(i.quantity) }))
   })
   ElMessage.success('保存成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 
-function viewItems(row: any) {
-  ElMessage.info('明细：' + row.stockNo)
+async function viewItems(row: any) {
+  detailItems.value = await otherStockItems(row.id)
+  detailVisible.value = true
 }
 
 // ===== 打印 =====

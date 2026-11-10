@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="工单">
         <el-select v-model="query.workOrderId" placeholder="全部" clearable filterable style="width: 200px">
@@ -20,7 +20,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增报工</el-button>
+      <el-button type="primary" @click="openForm()">新增报工</el-button>
       <el-button type="success" @click="handleBatchApprove">一键审核</el-button>
     </div>
 
@@ -67,35 +67,59 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增报工" width="560px">
-    <el-form :model="form" label-width="110px">
-      <el-form-item label="生产工单" required>
-        <el-select v-model="form.workOrderId" placeholder="请选择工单" filterable style="width: 100%" @change="onOrderChange">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="工序" required>
-        <el-select v-model="form.processId" placeholder="请选择工序" filterable :disabled="!form.workOrderId" style="width: 100%">
-          <el-option v-for="p in processes" :key="p.processId" :label="p.processName" :value="p.processId" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="报工数量" required><el-input v-model="form.quantity" type="number" /></el-form-item>
-      <el-form-item label="良品数量"><el-input v-model="form.qualifiedQty" type="number" /></el-form-item>
-      <el-form-item label="不良品数量"><el-input v-model="form.defectiveQty" type="number" /></el-form-item>
-      <el-form-item label="不良品项">
-        <el-select v-model="form.defectItemId" placeholder="选择不良品项" clearable filterable style="width: 100%">
-          <el-option v-for="d in defects" :key="d.id" :label="d.name" :value="d.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="不良原因"><el-input v-model="form.defectReason" /></el-form-item>
-      <el-form-item label="工时(小时)"><el-input v-model="form.workHours" type="number" /></el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增报工：整页单据表单 -->
+  <DocForm
+    v-else
+    title="新建报工单"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    hide-submit
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <!-- 生产工单：点开是表格选择器，看得见产品/数量/状态，不是一个光秃秃的编号下拉 -->
+    <template #field-workOrderId>
+      <div class="pick-field">
+        <el-input
+          :model-value="pickedOrder ? `${pickedOrder.orderNo} ${pickedOrder.productName || ''}` : ''"
+          readonly
+          size="small"
+          placeholder="点右侧选择工单"
+        />
+        <el-button size="small" @click="orderPickerVisible = true">选择</el-button>
+      </div>
     </template>
-  </el-dialog>
+    <template #field-processId>
+      <el-select
+        v-model="form.processId"
+        placeholder="请选择工序"
+        filterable
+        size="small"
+        :disabled="!form.workOrderId"
+        style="width: 100%"
+      >
+        <el-option v-for="p in processes" :key="p.processId" :label="p.processName" :value="p.processId" />
+      </el-select>
+    </template>
+    <template #field-defectItemId>
+      <el-select v-model="form.defectItemId" placeholder="选择不良品项" clearable filterable size="small" style="width: 100%">
+        <el-option v-for="d in defects" :key="d.id" :label="d.name" :value="d.id" />
+      </el-select>
+    </template>
+  </DocForm>
+
+  <!-- 生产工单选择器（表格） -->
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择生产工单"
+    keyword-placeholder="工单号 / 产品编号 / 产品名称"
+    :columns="orderPickCols"
+    :fetcher="fetchOrders"
+    @select="applyOrder"
+  />
 
   <PrintDialog
     v-model="printVisible"
@@ -115,11 +139,18 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { reportWorkList, reportWorkCreate, reportWorkApprove, reportWorkUnapprove, reportWorkReject, reportWorkBatchApprove, productionOrderList } from '@/api/production'
 import { processRouteItems, processList, defectList } from '@/api/base'
 import PrintDialog from '@/components/PrintDialog.vue'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import type { DocField } from '@/components/docForm'
+import type { DocPickColumn } from '@/components/DocPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+/** 选中的生产工单（只用于显示，不塞进 form 免得污染提交体） */
+const pickedOrder = ref<any>(null)
 const orders = ref<any[]>([])
 const processes = ref<any[]>([])
 const allProcesses = ref<any[]>([])
@@ -184,10 +215,67 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.workOrderId = undefined; query.auditStatus = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
   processes.value = []
-  dialogVisible.value = true
+  pickedOrder.value = null
+  formVisible.value = true
+}
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 基本信息字段 */
+const docFields: DocField[] = [
+  { key: 'workOrderId', label: '生产工单', type: 'slot', required: true },
+  { key: 'processId', label: '工序', type: 'slot', required: true },
+  { key: 'quantity', label: '报工数量', required: true },
+  { key: 'qualifiedQty', label: '良品数量' },
+  { key: 'defectiveQty', label: '不良品数量' },
+  { key: 'defectItemId', label: '不良品项', type: 'slot' },
+  { key: 'defectReason', label: '不良原因' },
+  { key: 'workHours', label: '工时(小时)' },
+  { key: 'remark', label: '备注', span: 2 }
+]
+
+/** 工单选择器的列 */
+const orderPickCols: DocPickColumn[] = [
+  { prop: 'orderNo', label: '工单号', width: '170' },
+  { prop: 'productCode', label: '产品编号', width: '140' },
+  { prop: 'productName', label: '产品名称', minWidth: '150' },
+  { prop: 'quantity', label: '生产数量', width: '100', align: 'right' },
+  { prop: 'completedQty', label: '已完成', width: '90', align: 'right' },
+  {
+    prop: 'approveStatus',
+    label: '审批状态',
+    width: '100',
+    format: (r: any) => ({ pending: '待提交', approving: '审批中', approved: '已审批' }[r.approveStatus as string] || r.approveStatus || '')
+  },
+  {
+    prop: 'bizStatus',
+    label: '业务状态',
+    width: '100',
+    format: (r: any) => ({ pending: '待开始', started: '生产中', finished: '已完工' }[r.bizStatus as string] || r.bizStatus || '')
+  }
+]
+
+function fetchOrders(p: { page: number; pageSize: number; keyword: string }) {
+  return productionOrderList(p as any)
+}
+
+/** 选中工单 → 带出工序 */
+async function applyOrder(order: any) {
+  pickedOrder.value = order
+  form.workOrderId = order.id
+  form.processId = undefined
+  processes.value = []
+  if (order.processRouteId) {
+    const items = await processRouteItems(order.processRouteId)
+    processes.value = items.map((it: any) => ({
+      processId: it.processId,
+      processName: processName(it.processId) || '工序' + it.processId
+    }))
+  }
 }
 
 async function handleSave() {
@@ -197,7 +285,7 @@ async function handleSave() {
   }
   await reportWorkCreate(form)
   ElMessage.success('报工成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 
@@ -261,4 +349,6 @@ load()
 .filter-bar { margin-bottom: 8px; }
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }
+.pick-field { display: flex; gap: 6px; align-items: center; }
+.pick-field .el-input { flex: 1; }
 </style>

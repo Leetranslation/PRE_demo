@@ -54,9 +54,14 @@
   <el-dialog v-model="dialogVisible" title="新增售后单" width="520px">
     <el-form :model="form" label-width="100px">
       <el-form-item label="销售订单" required>
-        <el-select v-model="form.orderId" placeholder="请选择订单" filterable style="width: 100%">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
+        <div class="pick-field">
+          <el-input
+            :model-value="pickedOrder ? `${pickedOrder.orderNo}  ${pickedOrder.customerName || ''}  ￥${pickedOrder.totalAmount ?? ''}` : ''"
+            readonly
+            placeholder="点右侧选择订单"
+          />
+          <el-button @click="orderPickerVisible = true">选择</el-button>
+        </div>
       </el-form-item>
       <el-form-item label="售后类型">
         <el-select v-model="form.type" placeholder="请选择" style="width: 100%">
@@ -72,6 +77,15 @@
       <el-button type="primary" @click="handleSave">保存</el-button>
     </template>
   </el-dialog>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择销售订单"
+    keyword-placeholder="销售单号 / 客户 / 产品"
+    :columns="SALES_ORDER_COLS"
+    :fetcher="(p) => salesOrderList(p as any)"
+    @select="applyOrder"
+  />
 </template>
 
 <script setup lang="ts">
@@ -79,6 +93,16 @@ defineOptions({ name: 'AfterSale' })
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { afterSaleList, afterSaleCreate, afterSaleStatus, salesOrderList } from '@/api/sales'
+import DocPicker from '@/components/DocPicker.vue'
+import { SALES_ORDER_COLS } from '@/components/docPickerPresets'
+
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
+
+function applyOrder(o: any) {
+  pickedOrder.value = o
+  form.orderId = o.id
+}
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -134,6 +158,8 @@ load()
 </script>
 
 <style scoped>
+.pick-field { display: flex; gap: 6px; align-items: center; }
+.pick-field .el-input { flex: 1; }
 .filter-bar { margin-bottom: 8px; }
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }

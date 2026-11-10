@@ -165,3 +165,7 @@ export function packingList(params: any) {
 export function packingCreate(data: any) {
   return request.post('/sales/packing/create', data)
 }
+/** 装箱明细 */
+export function packingItems(packingId: number) {
+  return request.get('/sales/packing/items', { params: { packingId } }) as Promise<any[]>
+}

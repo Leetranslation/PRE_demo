@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never">
+  <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="工单">
         <el-select v-model="query.workOrderId" placeholder="全部" clearable filterable style="width: 200px">
@@ -21,7 +21,7 @@
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增排产</el-button>
+      <el-button type="primary" @click="openForm()">新增排产</el-button>
     </div>
 
     <el-table :data="records" v-loading="loading" border stripe row-key="id">
@@ -60,44 +60,64 @@
     />
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="新增排产计划" width="560px">
-    <el-form :model="form" label-width="110px">
-      <el-form-item label="生产工单" required>
-        <el-select v-model="form.workOrderId" placeholder="请选择工单" filterable style="width: 100%" @change="onOrderChange">
-          <el-option v-for="o in orders" :key="o.id" :label="o.orderNo" :value="o.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="机台">
-        <el-select v-model="form.machineId" placeholder="请选择机台" clearable filterable style="width: 100%">
-          <el-option v-for="m in machines" :key="m.id" :label="m.name" :value="m.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="计划开始" required>
-        <el-date-picker v-model="form.planStart" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
-      </el-form-item>
-      <el-form-item label="计划结束" required>
-        <el-date-picker v-model="form.planEnd" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
-      </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">保存</el-button>
+  <!-- 新增排产计划：整页单据表单（无明细、无审批流） -->
+  <DocForm
+    v-else
+    title="新建排产计划"
+    :model-value="form"
+    :items="[]"
+    :fields="docFields"
+    :columns="[]"
+    hide-submit
+    @update:items="() => {}"
+    @cancel="closeForm"
+    @save="handleSave"
+  >
+    <template #field-workOrderId>
+      <div class="pick-field">
+        <el-input
+          :model-value="pickedOrder ? `${pickedOrder.orderNo} ${pickedOrder.productName || ''}` : ''"
+          readonly
+          size="small"
+          placeholder="点右侧选择工单"
+        />
+        <el-button size="small" @click="orderPickerVisible = true">选择</el-button>
+      </div>
     </template>
-  </el-dialog>
+    <template #field-machineId>
+      <el-select v-model="form.machineId" placeholder="请选择机台" clearable filterable size="small" style="width: 100%">
+        <el-option v-for="m in machines" :key="m.id" :label="m.name" :value="m.id" />
+      </el-select>
+    </template>
+  </DocForm>
+
+  <DocPicker
+    v-model="orderPickerVisible"
+    title="选择生产工单"
+    keyword-placeholder="工单号 / 产品编号 / 产品名称"
+    :columns="orderPickCols"
+    :fetcher="fetchOrders"
+    @select="applyOrder"
+  />
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Schedule' })
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { schedulePlanList, schedulePlanCreate, schedulePlanStatus, productionOrderList } from '@/api/production'
 import { machineList } from '@/api/base'
+import DocForm from '@/components/DocForm.vue'
+import DocPicker from '@/components/DocPicker.vue'
+import type { DocField } from '@/components/docForm'
+import type { DocPickColumn } from '@/components/DocPicker.vue'
 
 const loading = ref(false)
 const records = ref<any[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
+const formVisible = ref(false)
+const orderPickerVisible = ref(false)
+const pickedOrder = ref<any>(null)
 const orders = ref<any[]>([])
 const machines = ref<any[]>([])
 const query = reactive({ page: 1, pageSize: 10, workOrderId: undefined as number | undefined, status: undefined as string | undefined })
@@ -142,10 +162,48 @@ async function load() {
 function handleSearch() { query.page = 1; load() }
 function handleReset() { query.workOrderId = undefined; query.status = undefined; query.page = 1; load() }
 
-function openDialog() {
+function openForm() {
   Object.keys(form).forEach((k) => delete form[k])
-  dialogVisible.value = true
+  pickedOrder.value = null
+  formVisible.value = true
 }
+function closeForm() {
+  formVisible.value = false
+}
+
+/** 工单选择器的列 */
+const orderPickCols: DocPickColumn[] = [
+  { prop: 'orderNo', label: '工单号', width: '170' },
+  { prop: 'productCode', label: '产品编号', width: '140' },
+  { prop: 'productName', label: '产品名称', minWidth: '150' },
+  { prop: 'quantity', label: '生产数量', width: '100', align: 'right' },
+  { prop: 'completedQty', label: '已完成', width: '90', align: 'right' },
+  {
+    prop: 'approveStatus',
+    label: '审批状态',
+    width: '100',
+    format: (r: any) => ({ pending: '待提交', approving: '审批中', approved: '已审批' }[r.approveStatus as string] || r.approveStatus || '')
+  }
+]
+
+function fetchOrders(p: { page: number; pageSize: number; keyword: string }) {
+  return productionOrderList(p as any)
+}
+
+function applyOrder(order: any) {
+  pickedOrder.value = order
+  form.workOrderId = order.id
+  if (order.machineId) form.machineId = order.machineId
+}
+
+/** 基本信息字段 */
+const docFields: DocField[] = [
+  { key: 'workOrderId', label: '生产工单', type: 'slot', required: true },
+  { key: 'machineId', label: '机台', type: 'slot' },
+  { key: 'planStart', label: '计划开始', type: 'datetime', required: true },
+  { key: 'planEnd', label: '计划结束', type: 'datetime', required: true },
+  { key: 'remark', label: '备注', span: 2 }
+]
 
 async function handleSave() {
   if (!form.workOrderId || !form.planStart || !form.planEnd) {
@@ -154,7 +212,7 @@ async function handleSave() {
   }
   await schedulePlanCreate(form)
   ElMessage.success('排产成功')
-  dialogVisible.value = false
+  formVisible.value = false
   load()
 }
 
@@ -172,6 +230,8 @@ load()
 </script>
 
 <style scoped>
+.pick-field { display: flex; gap: 6px; align-items: center; }
+.pick-field .el-input { flex: 1; }
 .filter-bar { margin-bottom: 8px; }
 .toolbar { margin-bottom: 12px; }
 .pagination { margin-top: 12px; justify-content: flex-end; }

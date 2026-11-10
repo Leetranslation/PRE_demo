@@ -1,0 +1,7 @@
+# 快速换 jar：在现有 token-erp-backend 镜像上只覆盖 /app/app.jar。
+# 🔴 -Djava.net.preferIPv4Stack=true 必须加：
+#    容器里 host.docker.internal 同时有 IPv4(192.168.65.254) 和 IPv6(fdc4:...::254)，
+#    Java 默认优先 IPv6，而宿主机平台只监听 IPv4 → HttpClient 连 IPv6 直接卡死（无超时）。
+FROM token-erp-backend:latest
+COPY app.jar /app/app.jar
+ENTRYPOINT ["java", "-Djava.net.preferIPv4Stack=true", "-jar", "/app/app.jar"]

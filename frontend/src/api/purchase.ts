@@ -68,6 +68,10 @@ export function purchaseInquiryApprove(id: number) {
 export function purchaseInquiryUnapprove(id: number) {
   return request.post('/purchase/inquiry/unapprove', null, { params: { id } })
 }
+// 比价生单：询价单转采购订单（supplierId 省略时自动选总价最低的供应商）
+export function purchaseInquiryToOrder(inquiryId: number, supplierId?: number) {
+  return request.post('/purchase/inquiry/toPurchaseOrder', null, { params: { inquiryId, supplierId } }) as Promise<any>
+}
 
 // ===== 采购发票 =====
 export function purchaseInvoiceList(params: any) {

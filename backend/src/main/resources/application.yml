@@ -6,14 +6,20 @@ spring:
     name: token-erp-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/token_erp?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    # ⚠️ 演示库：token_erp_demo（造数后的完整业务数据，150 销售单 / 100 采购单 / 100 工单）
+    #    切回原库改成 token_erp 即可（原库数据未动）
+    # ⚠️ host / port / 库名都可用环境变量覆盖，**默认值仍是 127.0.0.1:3306/token_erp_demo**，
+    #    所以本地不起容器时行为完全不变。
+    #    容器化时由 compose 传 DB_HOST=host.docker.internal（连宿主机 MySQL，数据只有一份）。
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:token_erp_demo}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD}
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      database: 0
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      # 🔴 测试后端连 db1，避免吃掉真实单据流水号（code:seq:* 不分库，共享 db0 会跳号）
+      database: ${REDIS_DB:0}
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
@@ -30,7 +36,7 @@ mybatis-plus:
 
 token-erp:
   jwt:
-    secret: ${JWT_SECRET:token-erp-secret-key-please-change-in-production-0123456789}
+    secret: ${JWT_SECRET}
     expire-hours: 24
 
 springdoc:

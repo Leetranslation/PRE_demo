@@ -42,8 +42,21 @@ public class PackingService {
     }
 
     public List<PackingItem> items(Long packingId) {
-        return itemMapper.selectList(
+        List<PackingItem> list = itemMapper.selectList(
                 new LambdaQueryWrapper<PackingItem>().eq(PackingItem::getPackingId, packingId));
+        if (!list.isEmpty()) {
+            Map<Long, String[]> pm = nameFillUtil.productMap(
+                    list.stream().map(PackingItem::getProductId).filter(java.util.Objects::nonNull)
+                            .collect(Collectors.toList()));
+            for (PackingItem it : list) {
+                String[] p = pm.get(it.getProductId());
+                if (p != null) {
+                    it.setProductCode(p[0]);
+                    it.setProductName(p[1]);
+                }
+            }
+        }
+        return list;
     }
 
     @Transactional
