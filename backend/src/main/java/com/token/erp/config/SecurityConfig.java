@@ -50,6 +50,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        // 🔴 SSE（SseEmitter）会用 ASYNC 分派**再走一遍过滤器链**，
+                        //    这一趟不带 SecurityContext，不放行就会在数据发完前被判 401。
+                        //    仅放行容器内部的异步分派，不影响外部请求的鉴权。
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll()
                         .anyRequest().authenticated())
                 // 未登录/令牌失效：返回 401（区别于 403 无权限）
                 .exceptionHandling(eh -> eh

@@ -5,6 +5,7 @@ import com.token.erp.common.Result;
 import com.token.erp.entity.Dictionary;
 import com.token.erp.service.DictionaryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/base/dict")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('base:dict')")
 public class DictionaryController {
 
     private final DictionaryService dictionaryService;
@@ -31,11 +33,13 @@ public class DictionaryController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('base:dict:create')")
     public Result<Dictionary> create(@RequestBody Dictionary dictionary) {
         return Result.success(dictionaryService.create(dictionary));
     }
 
     @PostMapping("/update")
+    @PreAuthorize("hasAuthority('base:dict:update')")
     public Result<Dictionary> update(@RequestBody Dictionary dictionary) {
         return Result.success(dictionaryService.update(dictionary));
     }

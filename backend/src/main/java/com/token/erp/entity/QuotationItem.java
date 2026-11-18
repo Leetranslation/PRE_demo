@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @TableName("quotation_item")
@@ -23,5 +24,7 @@ public class QuotationItem implements Serializable {
     private BigDecimal amountExTax;
     private BigDecimal taxAmount;
     private BigDecimal totalAmount;
+    /** 行级交付日期（交期风险评估用） */
+    private LocalDate deliveryDate;
     private String remark;
 }

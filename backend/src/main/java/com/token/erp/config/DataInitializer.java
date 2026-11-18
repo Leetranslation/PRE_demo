@@ -57,6 +57,7 @@ public class DataInitializer implements CommandLineRunner {
             {"base:serialRule", "序列号规则", "menu", "/produceData/serialRule"},
             {"base:defect", "不良品项", "menu", "/produceData/defect"},
             {"base:area", "库区管理", "menu", "/base/area"},
+            {"base:dict", "数据字典", "menu", "/base/dict"},
             {"production:reportWork", "报工管理", "menu", "/production/reportWork"},
             {"production:reportWork:create", "报工新增", "button", null},
             {"production:reportWork:audit", "审工", "button", null},
@@ -100,6 +101,8 @@ public class DataInitializer implements CommandLineRunner {
             {"base:defect:create", "不良品项新增/编辑", "button", null},
             {"base:area:create", "库区新增", "button", null},
             {"base:area:update", "库区编辑/停用", "button", null},
+            {"base:dict:create", "字典新增", "button", null},
+            {"base:dict:update", "字典编辑", "button", null},
             // 库存 - 菜单
             {"inventory", "库存查询/流水", "menu", "/inventory"},
             {"inventory:otherStock", "其他出入库", "menu", "/inventory/otherStock"},

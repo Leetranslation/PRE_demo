@@ -22,6 +22,10 @@ public class Product extends BaseEntity {
     private String batchManage;
     private Integer productionQc;
     private Integer productionLeadDays;
+    /** 人工录入的平均采购周期（整批天）；为空则按历史采购单据计算 */
+    private BigDecimal purchaseCycleDays;
+    /** 人工录入的平均外协周期（整批天）；为空则按历史外协单据计算 */
+    private BigDecimal outsourceCycleDays;
     private BigDecimal minStock;
     private BigDecimal safetyStock;
     private BigDecimal maxStock;

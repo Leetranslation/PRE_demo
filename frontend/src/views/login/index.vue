@@ -5,17 +5,17 @@
       <p class="subtitle">制造业 ERP 管理系统</p>
       <el-form :model="form" @submit.prevent="handleLogin">
         <el-form-item>
-          <el-input v-model="form.username" placeholder="用户名" size="large">
+          <el-input v-model="form.username" placeholder="用户名" size="large" data-testid="login-username">
             <template #prefix><el-icon><User /></el-icon></template>
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password>
+          <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password data-testid="login-password">
             <template #prefix><el-icon><Lock /></el-icon></template>
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" size="large" class="login-btn" native-type="submit" :loading="loading">
+          <el-button type="primary" size="large" class="login-btn" native-type="submit" :loading="loading" data-testid="login-submit">
             登 录
           </el-button>
         </el-form-item>

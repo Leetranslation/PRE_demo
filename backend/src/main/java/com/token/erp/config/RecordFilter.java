@@ -55,7 +55,16 @@ public class RecordFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return !enabled || !uri.startsWith("/api/");
+        if (!enabled || !uri.startsWith("/api/")) return true;
+        /*
+         * 🔴 必须跳过 SSE。
+         * 这里把响应包成 ContentCachingResponseWrapper，`finally` 里会
+         * copyBodyToResponse() —— 而 SSE（SseEmitter）是异步的：
+         * 过滤器链返回时数据还没开始发，这次 flush 就把响应**提前提交并关闭**了，
+         * 客户端只能收到 200 + 0 字节。按 Accept 判断跳过最稳。
+         */
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.contains("text/event-stream");
     }
 
     @Override

@@ -29,6 +29,10 @@ public class Material extends BaseEntity {
     private Integer purchaseQc;
     private Integer productionQc;
     private Integer purchaseLeadDays;
+    /** 人工录入的平均生产周期（天/件）；为空则按历史生产工单计算 */
+    private BigDecimal productionCycleDays;
+    /** 人工录入的平均外协周期（整批天）；为空则按历史外协单据计算 */
+    private BigDecimal outsourceCycleDays;
     private Integer status;
     /** 序列号规则ID（启用序列号时引用） */
     private Long serialRuleId;

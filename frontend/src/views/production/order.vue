@@ -412,24 +412,27 @@ function closeForm() {
 
 /** 基本信息字段（5 列网格） */
 const docFields: DocField[] = [
-  { key: 'productId', label: '产品', type: 'slot', required: true },
-  { key: 'quantity', label: '生产数量', required: true, placeholder: '生产数量' },
+  // ---- 生产对象 ----
+  { key: 'productId', label: '产品', type: 'slot', required: true, group: '生产对象' },
+  { key: 'quantity', label: '生产数量', required: true, placeholder: '生产数量', group: '生产对象' },
   {
     key: 'productionType',
     label: '生产类型',
     type: 'select',
+    group: '生产对象',
     options: [
       { label: '订单生产', value: 'order' },
       { label: '库存生产', value: 'stock' },
       { label: 'MRP生产', value: 'mrp' }
     ]
   },
-  { key: 'planDate', label: '计划生产日期', type: 'date' },
-  { key: 'workshopId', label: '车间', type: 'slot' },
-  { key: 'machineId', label: '机台', type: 'slot' },
-  { key: 'processRouteName', label: '工艺路线', type: 'readonly', placeholder: '选产品后自动带出' },
-  { key: 'owner', label: '负责人' },
-  { key: 'remark', label: '备注', span: 2 }
+  { key: 'planDate', label: '计划生产日期', type: 'date', group: '生产对象' },
+  // ---- 执行安排 ----
+  { key: 'workshopId', label: '车间', type: 'slot', group: '执行安排' },
+  { key: 'machineId', label: '机台', type: 'slot', group: '执行安排' },
+  { key: 'processRouteName', label: '工艺路线', type: 'readonly', placeholder: '选产品后自动带出', group: '执行安排' },
+  { key: 'owner', label: '负责人', group: '执行安排' },
+  { key: 'remark', label: '备注', span: 2, group: '执行安排' }
 ]
 
 async function handleSave(submitAfter = false) {

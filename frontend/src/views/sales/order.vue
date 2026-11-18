@@ -2,7 +2,7 @@
   <el-card v-if="!formVisible" shadow="never">
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="单号">
-        <el-input v-model="query.keyword" placeholder="销售单号" clearable style="width: 200px" @keyup.enter="handleSearch" />
+        <el-input v-model="query.keyword" placeholder="销售单号" clearable style="width: 200px" @keyup.enter="handleSearch" data-testid="sales-order-keyword" />
       </el-form-item>
       <el-form-item label="审批状态">
         <el-select v-model="query.approveStatus" placeholder="全部" clearable style="width: 140px">
@@ -12,17 +12,17 @@
         </el-select>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="handleSearch">查询</el-button>
-        <el-button @click="handleReset">重置</el-button>
+        <el-button type="primary" @click="handleSearch" data-testid="sales-order-search-btn">查询</el-button>
+        <el-button @click="handleReset" data-testid="sales-order-reset-btn">重置</el-button>
       </el-form-item>
     </el-form>
 
     <div class="toolbar">
-      <el-button type="primary" @click="openForm">新增销售单</el-button>
+      <el-button type="primary" @click="openForm" data-testid="sales-order-create-btn">新增销售单</el-button>
       <el-button @click="doExport">导出</el-button>
     </div>
 
-    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange">
+    <el-table :data="records" v-loading="loading" border stripe row-key="id" @selection-change="onSelectionChange" data-testid="sales-order-table">
       <el-table-column type="selection" width="50" reserve-selection />
       <el-table-column prop="orderNo" label="销售单号" width="170" />
       <el-table-column prop="customerName" label="客户" width="140" />
@@ -67,6 +67,7 @@
   <!-- 新增销售单：整页单据表单 -->
   <DocForm
     v-else
+    ref="docFormRef"
     title="新建销售订单"
     :model-value="form"
     :items="form.items"
@@ -74,6 +75,7 @@
     :columns="docColumns"
     @update:items="(v) => (form.items = v)"
     @add="addItem"
+    @pick="onPickColumn"
     @cancel="closeForm"
     @save="handleSave(false)"
     @submit="handleSave(true)"
@@ -94,17 +96,8 @@
       </el-select>
     </template>
 
-    <template #col-product="{ row }">
-      <div class="picker-cell">
-        <template v-if="row.productId">
-          <span class="picker-name">{{ row.productCode }} {{ row.productName }}</span>
-          <span class="picker-spec">{{ row.spec }}</span>
-        </template>
-        <span v-else class="picker-empty">未选择产品</span>
-      </div>
-      <el-button link size="small" type="primary" @click="openProductPicker(row._uid)">
-        {{ row.productId ? '更换' : '选择产品' }}
-      </el-button>
+    <template #actions>
+      <el-button size="small" type="primary" plain @click="openRisk">AI智能交期评估</el-button>
     </template>
 
     <template #col-total="{ row }">{{ ((row.quantity || 0) * (row.price || 0)).toFixed(2) }}</template>
@@ -252,6 +245,15 @@
 
   <!-- 产品选择弹窗 -->
   <ProductPicker v-model="productPickerVisible" @select="onProductSelected" />
+
+  <!-- AI 交期风险智能预警：弹窗看风险，抽屉看分析过程 -->
+  <DeliveryRiskDialog
+    v-model="riskVisible"
+    :items="riskItems"
+    @analyze="openAnalysis"
+    @apply="onRiskApply"
+  />
+  <DeliveryRiskAnalysis v-model="analysisVisible" :items="riskItems" />
 </template>
 
 <script setup lang="ts">
@@ -264,6 +266,9 @@ import {
 } from '@/api/sales'
 import { customerList, warehouseList } from '@/api/base'
 import ProductPicker from '@/components/ProductPicker.vue'
+import DeliveryRiskDialog from '@/components/DeliveryRiskDialog.vue'
+import DeliveryRiskAnalysis from '@/components/DeliveryRiskAnalysis.vue'
+import type { RiskRow, InlineItem } from '@/api/deliveryRisk'
 import DocForm from '@/components/DocForm.vue'
 import type { DocColumn, DocField } from '@/components/docForm'
 import { useExport } from '@/composables/useExport'
@@ -280,9 +285,59 @@ const customers = ref<any[]>([])
 const customerLoading = ref(false)
 // 产品选择
 const productPickerVisible = ref(false)
-const currentProductRow = ref<any>(null)
-/** 当前选产品要写回的行（用 _uid 定位：跨组件传对象拿不到同一引用，$index 也取不到） */
-const currentRowUid = ref<number>(-1)
+
+// ---- AI 交期风险评估 ----
+const riskVisible = ref(false)
+const analysisVisible = ref(false)
+/** 评估用的明细快照（新建时单据还没入库，只能把内存明细传过去） */
+const riskItems = ref<InlineItem[]>([])
+
+function openRisk() {
+  if (!form.items.length) {
+    ElMessage.warning('请先添加明细再评估')
+    return
+  }
+  const bad = form.items.findIndex((i: any) => !i.productId || !Number(i.quantity))
+  if (bad >= 0) {
+    ElMessage.warning(`第 ${bad + 1} 行还没选产品或填数量`)
+    return
+  }
+  // 文档前置条件：必须已填交付日期。行级没填就退回单据级，两级都没有就不让评估
+  const noDate = form.items.findIndex((i: any) => !(i.deliveryDate || form.deliveryDate))
+  if (noDate >= 0) {
+    ElMessage.warning(
+      `第 ${noDate + 1} 行没有交付日期，单据级交付日期也没填 —— 交期评估需要交付日期`
+    )
+    return
+  }
+  riskItems.value = form.items.map((i: any) => ({
+    productId: i.productId,
+    quantity: Number(i.quantity) || 0,
+    deliveryDate: i.deliveryDate || form.deliveryDate || null,
+    spec: i.spec,
+    unit: i.unit
+  }))
+  riskVisible.value = true
+}
+
+function openAnalysis() {
+  analysisVisible.value = true
+}
+
+/** 采纳建议：把 AI 建议日期写回对应明细行（itemId 是行下标，从 1 开始） */
+function onRiskApply(rows: RiskRow[]) {
+  let n = 0
+  for (const r of rows) {
+    const idx = Number(r.itemId) - 1
+    const row = form.items[idx]
+    if (row && r.suggestDate) {
+      row.deliveryDate = r.suggestDate
+      n++
+    }
+  }
+  form.items = [...form.items]
+  ElMessage.success(`已把 ${n} 行交付日期替换为 AI 建议日期`)
+}
 const pickerTarget = ref<'row' | 'return'>('row')
 // 仓库下拉
 const warehouses = ref<any[]>([])
@@ -317,9 +372,28 @@ async function searchCustomer(keyword: string) {
   }
 }
 
-function openProductPicker(uid: number) {
+/**
+ * DocForm 的实例。明细行里选完产品后调它的 `applyPick()` 写回 ——
+ * 直接改行对象不会重渲染，必须由组件整体换数组（见 DocForm 里的说明）。
+ */
+const docFormRef = ref<any>(null)
+/** 这次选择是「明细行」发起的（走 applyPick），还是「出库弹窗」发起的（直接改行） */
+const fromDocForm = ref(false)
+/** 出库弹窗里的目标行 */
+const targetRow = ref<any>(null)
+
+function openProductPicker(row?: any) {
   pickerTarget.value = 'row'
-  currentRowUid.value = uid
+  fromDocForm.value = false
+  targetRow.value = row || null
+  productPickerVisible.value = true
+}
+
+/** DocForm 明细行的「选择产品」—— 由组件内部记录行号，这里只负责开弹窗 */
+function onPickColumn(key: string) {
+  if (key !== 'product') return
+  pickerTarget.value = 'row'
+  fromDocForm.value = true
   productPickerVisible.value = true
 }
 
@@ -329,19 +403,26 @@ function openReturnProductPicker() {
 }
 
 function onProductSelected(product: any) {
+  const fields = {
+    productId: product.id,
+    productCode: product.code,
+    productName: product.name,
+    spec: product.spec,
+    unit: product.unit
+  }
   if (pickerTarget.value === 'return') {
     returnForm.productId = product.id
     returnForm.productName = product.name
-  } else {
-    const row = form.items.find((r: any) => r._uid === currentRowUid.value)
-    if (row) {
-      row.productId = product.id
-      row.productCode = product.code
-      row.productName = product.name
-      row.spec = product.spec
-      row.unit = product.unit
-      form.items = [...form.items] // 换新数组强制表格重渲染
-    }
+    return
+  }
+  if (fromDocForm.value) {
+    docFormRef.value?.applyPick(fields)
+    fromDocForm.value = false
+    return
+  }
+  if (targetRow.value) {
+    Object.assign(targetRow.value, fields)
+    targetRow.value = null
   }
 }
 
@@ -407,8 +488,18 @@ const docFields: DocField[] = [
 
 /** 明细列 */
 const docColumns: DocColumn[] = [
-  { key: 'product', label: '产品名称', width: '260' },
+  {
+    key: 'product',
+    label: '产品名称',
+    width: '260',
+    type: 'picker',
+    emptyText: '未选择产品',
+    display: (r: any) => (r.productId ? `${r.productCode || ''} ${r.productName || ''}`.trim() : ''),
+    sub: (r: any) => r.spec || '',
+    pickText: (r: any) => (r.productId ? '更换' : '选择产品')
+  },
   { key: 'quantity', label: '数量', width: '110', type: 'input', align: 'right', placeholder: '数量' },
+  { key: 'deliveryDate', label: '交付日期', width: '140', type: 'date' },
   { key: 'price', label: '含税单价', width: '120', type: 'input', align: 'right', placeholder: '单价' },
   { key: 'taxRate', label: '税率%', width: '90', type: 'input', align: 'right', placeholder: '税率' },
   { key: 'unit', label: '基本单位', width: '90' },
@@ -424,7 +515,7 @@ const sumAmount = computed(() =>
     .toFixed(2)
 )
 
-function addItem() { form.items.push({ _uid: Date.now() + Math.floor(Math.random() * 100000), productId: undefined, productName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '' }) }
+function addItem() { form.items.push({ productId: undefined, productName: '', spec: '', quantity: 0, price: 0, taxRate: 13, unit: '', deliveryDate: '' }) }
 async function handleSave(submitAfter = false) {
   if (!form.customerId) { ElMessage.warning('请选择客户'); return }
   if (!form.items.length) { ElMessage.warning('请至少添加一条明细'); return }
